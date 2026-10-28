@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>嗓音分析工作站</title>
+<style>
+:root{--bg:#f3f5f8;--panel:#fff;--ink:#1c2433;--muted:#687287;--line:#e1e5ec;--accent:#2563a8;--accent-2:#e8f0fa;--ok:#2f855a;--warn:#c4661a;--bad:#c53030;--side:#18222f;--side-ink:#cfd8e3}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font:14px/1.55 "Microsoft YaHei","PingFang SC","Noto Sans SC",system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{display:grid;grid-template-columns:250px 1fr;height:100vh}
+aside{background:var(--side);color:var(--side-ink);display:flex;flex-direction:column;min-height:0}
+.brand{padding:18px 18px 12px;font-weight:700;font-size:16px;color:#fff;letter-spacing:.5px}
+.brand small{display:block;font-weight:400;font-size:12px;color:#8a97a8;letter-spacing:0}
+.side-tools{padding:0 14px 10px;display:flex;gap:8px}
+.side-tools input{flex:1;min-width:0;background:#243245;border:1px solid #2f3f55;border-radius:6px;padding:6px 9px;color:#fff}
+.side-tools button{background:var(--accent);border:0;color:#fff;border-radius:6px;padding:0 10px;cursor:pointer;white-space:nowrap}
+#clientList{flex:1;overflow:auto;padding:4px 8px}
+.ci{padding:8px 10px;border-radius:6px;cursor:pointer;margin-bottom:2px}
+.ci:hover{background:#223044}
+.ci.on{background:#2b3d55;color:#fff}
+.ci .cn{font-weight:600}
+.ci .cm{font-size:12px;color:#8a97a8}
+.empty-s{padding:12px;color:#8a97a8;font-size:13px}
+.side-foot{border-top:1px solid #263447;padding:10px 14px;display:flex;gap:6px;flex-wrap:wrap}
+.side-foot button{background:none;border:1px solid #33465f;color:var(--side-ink);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px}
+.side-foot button:hover{background:#223044}
+main{overflow:auto;min-width:0}
+.head{background:var(--panel);border-bottom:1px solid var(--line);padding:14px 24px 0;position:sticky;top:0;z-index:5}
+.head h1{margin:0;font-size:20px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.head h1 .meta{font-size:13px;font-weight:400;color:var(--muted)}
+.head h1 .btn{margin-left:auto}
+.tabs{display:flex;gap:4px;margin-top:8px;overflow-x:auto}
+.tab{padding:8px 14px;border:0;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+#content{padding:20px 24px 40px;max-width:1280px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.card h3{margin:0 0 10px;font-size:15px}
+.card .sub{color:var(--muted);font-size:12.5px}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.grow{flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 12px;cursor:pointer;white-space:nowrap;font-size:13.5px}
+.btn:hover{border-color:#b9c3d2}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.rec{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn.sm{padding:3px 9px;font-size:12px}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+.inp{border:1px solid var(--line);border-radius:7px;padding:6px 10px;background:#fff;min-width:0}
+textarea.inp{width:100%;resize:vertical}
+.grid2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:1000px){.grid2,.grid3{grid-template-columns:1fr}.app{grid-template-columns:200px 1fr}}
+canvas{display:block;width:100%}
+.views canvas{cursor:crosshair}
+.hint{color:var(--muted);font-size:12.5px}
+.placeholder{border:1.5px dashed #c9d1dd;border-radius:10px;padding:40px 20px;text-align:center;color:var(--muted)}
+table.kv{width:100%;border-collapse:collapse}
+table.kv td,table.kv th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:13.5px}
+table.kv th{color:var(--muted);font-weight:500;font-size:12.5px}
+table.kv td.num{font-variant-numeric:tabular-nums;font-weight:600}
+table.kv td.ref{color:var(--muted);font-size:12.5px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;background:#cbd2dc}
+.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}
+.live{display:flex;align-items:center;gap:18px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 16px;margin-bottom:14px}
+.live .big{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;min-width:90px}
+.live .val{font-variant-numeric:tabular-nums;color:var(--muted)}
+.live .val b{color:var(--ink);font-size:16px}
+.meter{flex:1;height:14px;background:#eef1f5;border-radius:7px;position:relative;overflow:hidden;min-width:120px}
+.meter i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#48bb78,#ecc94b 75%,#e53e3e)}
+.meter .band{position:absolute;top:0;bottom:0;background:rgba(37,99,168,.18);border-left:2px solid var(--accent);border-right:2px solid var(--accent)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:6px 12px;cursor:pointer}
+.seg button.on{background:var(--accent);color:#fff}
+.grbas{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px}
+.grbas label{display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--muted);gap:4px}
+.grbas label b{color:var(--ink);font-size:16px}
+.stat{display:flex;flex-direction:column;gap:2px}
+.stat .k{color:var(--muted);font-size:12.5px}
+.stat .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat .v small{font-size:13px;font-weight:400;color:var(--muted)}
+.dsi-bar{position:relative;height:10px;border-radius:5px;background:linear-gradient(90deg,#e53e3e,#ecc94b 50%,#48bb78);margin:14px 0 4px}
+.dsi-bar i{position:absolute;top:-5px;width:4px;height:20px;background:var(--ink);border-radius:2px;transform:translateX(-2px)}
+.dsi-scale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:var(--accent-2);color:var(--accent)}
+.tag.vrp{background:#eaf6ee;color:#2f855a}.tag.strain{background:#fdf1e6;color:#b45309}
+.readtext{font-size:20px;line-height:1.9;background:#fffdf6;border:1px solid #efe6c9;border-radius:10px;padding:18px 22px;max-height:260px;overflow:auto}
+.strain-meter{position:relative;height:46px;background:#eef1f5;border-radius:10px;overflow:hidden;margin:6px 0 4px}
+.strain-meter .band{position:absolute;top:0;bottom:0;background:rgba(47,133,90,.2);border-left:2px solid var(--ok);border-right:2px solid var(--ok)}
+.strain-meter .needle{position:absolute;top:4px;bottom:4px;width:6px;border-radius:3px;background:var(--ink);transform:translateX(-3px);transition:left .08s linear}
+.strain-scale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.welcome{max-width:640px;margin:60px auto;text-align:center;color:var(--muted)}
+.welcome h2{color:var(--ink)}
+.welcome .mods{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;text-align:left;margin:24px 0}
+.welcome .mods div{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.welcome .mods b{color:var(--ink);display:block}
+.ovl{position:fixed;inset:0;background:rgba(15,23,35,.45);display:flex;align-items:center;justify-content:center;z-index:50}
+.modal{background:#fff;border-radius:12px;padding:20px 22px;width:min(560px,94vw);max-height:90vh;overflow:auto}
+.modal h3{margin:0 0 14px}
+.form{display:grid;grid-template-columns:96px 1fr;gap:10px 12px;align-items:center}
+.form .full{grid-column:1/-1}
+.modal .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1c2433;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:60}
+#toast.show{opacity:1}
+.report{background:#fff;max-width:820px;margin:0 auto;padding:36px 42px;box-shadow:0 2px 14px rgba(20,30,50,.08);border-radius:4px;color:#111}
+.report h1{font-size:22px;margin:0;text-align:center;letter-spacing:2px}
+.report .rsub{text-align:center;color:#555;font-size:12.5px;margin:4px 0 18px}
+.report h2{font-size:15px;border-left:4px solid var(--accent);padding-left:8px;margin:22px 0 10px}
+.report table{width:100%;border-collapse:collapse;font-size:13px}
+.report td,.report th{border:1px solid #d6dbe3;padding:5px 8px;text-align:left}
+.report th{background:#f4f6f9;font-weight:600}
+.report img{width:100%;display:block;margin:8px 0;border:1px solid #eceff4}
+.report .info td{border:0;padding:3px 8px}
+.report .sign{display:flex;justify-content:space-between;margin-top:36px;font-size:13px}
+.report .note{font-size:11.5px;color:#666;margin-top:20px;line-height:1.6}
+.sel-list label{display:flex;gap:8px;align-items:center;padding:4px 0;font-size:13px}
+@media print{
+ @page{size:A4;margin:12mm}
+ body{background:#fff}
+ .app{display:block;height:auto}
+ aside,.head,.no-print,#toast{display:none!important}
+ main{overflow:visible}
+ #content{padding:0;max-width:none}
+ .report{box-shadow:none;padding:0;max-width:none}
+ .report h2,.report img,.report table{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="app">
+ <aside>
+  <div class="brand">嗓音分析工作站<small>Voice Lab · 工作室版</small></div>
+  <div class="side-tools"><input id="search" placeholder="搜索学员" oninput="renderSidebar()"><button onclick="editClient()">+ 新建</button></div>
+  <div id="clientList"></div>
+  <div class="side-foot"><button onclick="openSettings()">⚙ 设置与校准</button><button onclick="exportBackup()">导出备份</button><label><button onclick="this.nextElementSibling.click()">导入备份</button><input type="file" accept=".json" hidden onchange="importBackup(this)"></label></div>
+ </aside>
+ <main id="main"></main>
+</div>
+<div id="toast"></div>
+<audio id="player" hidden></audio>
+<script>
+/* ============ 基础工具 ============ */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const pad=n=>String(n).padStart(2,'0');
+const fmtDate=ts=>{const d=new Date(ts);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const fx=(v,d=1)=>v==null||!isFinite(v)?'—':(+v).toFixed(d);
+const NOTES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const hzMidi=f=>69+12*Math.log2(f/440), midiHz=m=>440*2**((m-69)/12);
+const noteName=m=>{const r=Math.round(m);return NOTES[((r%12)+12)%12]+(Math.floor(r/12)-1)};
+const mean=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:NaN;
+const sd=a=>{if(a.length<2)return NaN;const m=mean(a);return Math.sqrt(a.reduce((s,v)=>s+(v-m)**2,0)/(a.length-1))};
+const median=a=>{if(!a.length)return NaN;const b=[...a].sort((x,y)=>x-y);return b[b.length>>1]};
+const TYPE={vowel:'唱音分析',vrp:'音域测量',strain:'疲劳测试'};
+function toast(msg,ms=2600){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),ms)}
+
+const S=(()=>{const d={calib:100,fmin:60,fmax:1100,deviceId:'',studio:'',examiner:''};try{return Object.assign(d,JSON.parse(localStorage.getItem('voicelab.settings')||'{}'))}catch(e){return d}})();
+function saveSettings(){try{localStorage.setItem('voicelab.settings',JSON.stringify(S))}catch(e){}}
+
+/* ============ 数据库 (IndexedDB, 数据只保存在本机浏览器) ============ */
+const DB={db:null,
+ open(){return new Promise((res,rej)=>{const r=indexedDB.open('voicelab',1);r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore('clients',{keyPath:'id'});d.createObjectStore('sessions',{keyPath:'id'}).createIndex('client','clientId')};r.onsuccess=()=>{this.db=r.result;res()};r.onerror=()=>rej(r.error)})},
+ tx(store,mode,fn){return new Promise((res,rej)=>{const t=this.db.transaction(store,mode),r=fn(t.objectStore(store));let out;if(r)r.onsuccess=()=>out=r.result;t.oncomplete=()=>res(out);t.onerror=()=>rej(t.error)})},
+ all(s){return this.tx(s,'readonly',o=>o.getAll())},
+ put(s,v){return this.tx(s,'readwrite',o=>o.put(v))},
+ del(s,id){return this.tx(s,'readwrite',o=>o.delete(id))},
+ byClient(cid){return this.tx('sessions','readonly',o=>o.index('client').getAll(cid))}
+};
+
+/* ============ DSP ============ */
+function fft(re,im){const n=re.length;
+ for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){let t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t}}
+ for(let len=2;len<=n;len<<=1){const ang=-2*Math.PI/len,wr=Math.cos(ang),wi=Math.sin(ang),h=len>>1;
+  for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let k=0;k<h;k++){const a=i+k,b=a+h,tr=re[b]*cr-im[b]*ci,ti=re[b]*ci+im[b]*cr;re[b]=re[a]-tr;im[b]=im[a]-ti;re[a]+=tr;im[a]+=ti;const nr=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=nr}}}
+}
+const hann=n=>{const w=new Float64Array(n);for(let i=0;i<n;i++)w[i]=.5-.5*Math.cos(2*Math.PI*i/(n-1));return w};
+const _kern={};
+function lpKernel(k){if(_kern[k])return _kern[k];const T=63,fc=.45/k,h=new Float32Array(T);let s=0;
+ for(let i=0;i<T;i++){const m=i-(T-1)/2,v=m===0?2*fc:Math.sin(2*Math.PI*fc*m)/(Math.PI*m);h[i]=v*(.54-.46*Math.cos(2*Math.PI*i/(T-1)));s+=h[i]}
+ for(let i=0;i<T;i++)h[i]/=s;return _kern[k]=h}
+// 降采样到约 16 kHz，用于基频跟踪
+function decimate(x,sr){const k=Math.max(1,Math.round(sr/16000));if(k===1)return{y:x,sr};
+ const h=lpKernel(k),T=h.length,half=(T-1)>>1,n=Math.floor(x.length/k),y=new Float32Array(n),L=x.length;
+ for(let i=0;i<n;i++){const c=i*k-half;let a=0;if(c>=0&&c+T<=L){for(let t=0;t<T;t++)a+=h[t]*x[c+t]}else{for(let t=0;t<T;t++){const j=c+t;if(j>=0&&j<L)a+=h[t]*x[j]}}y[i]=a}
+ return{y,sr:sr/k}}
+// YIN 基频估计（FFT 加速）
+function makeYin(sr,fmin,fmax){
+ const maxLag=Math.ceil(sr/fmin),minLag=Math.max(2,Math.floor(sr/fmax)),W=Math.max(maxLag,Math.round(sr*.03)),N=W+maxLag;let F=1;while(F<N+W)F<<=1;
+ const ar=new Float64Array(F),ai=new Float64Array(F),br=new Float64Array(F),bi=new Float64Array(F),cm=new Float64Array(maxLag+2),d=new Float64Array(maxLag+2),e=new Float64Array(N+1);
+ return{W,N,maxLag,run(x,off){
+  ar.fill(0);ai.fill(0);br.fill(0);bi.fill(0);e[0]=0;
+  for(let i=0;i<N;i++){const v=x[off+i]||0;br[i]=v;if(i<W)ar[i]=v;e[i+1]=e[i]+v*v}
+  fft(ar,ai);fft(br,bi);
+  for(let i=0;i<F;i++){const re=ar[i]*br[i]+ai[i]*bi[i],im=ar[i]*bi[i]-ai[i]*br[i];ar[i]=re;ai[i]=-im}
+  fft(ar,ai);
+  const e0=e[W];let run=0;cm[0]=1;
+  for(let t=1;t<=maxLag;t++){d[t]=Math.max(0,e0+(e[t+W]-e[t])-2*ar[t]/F);run+=d[t];cm[t]=run>0?d[t]*t/run:1}
+  let best=-1;
+  for(let t=minLag;t<=maxLag;t++){if(cm[t]<.15){while(t+1<=maxLag&&cm[t+1]<cm[t])t++;best=t;break}}
+  if(best<0){let mv=1e9;for(let t=minLag;t<=maxLag;t++)if(cm[t]<mv){mv=cm[t];best=t}}
+  let tau=best;if(best>minLag&&best<maxLag){const a=cm[best-1],b=cm[best],c=cm[best+1],den=a-2*b+c;if(den>0)tau=best+.5*(a-c)/den}
+  const et=e[best+W]-e[best],nac=e0>0&&et>0?(ar[best]/F)/Math.sqrt(e0*et):0;
+  return{f0:sr/tau,cmnd:cm[best],nac,rms:Math.sqrt(e0/W)}}}
+}
+// 实时分析器：每个音频块给出 F0 与声级
+function makeRT(sr){const k=Math.max(1,Math.round(sr/16000)),yin=makeYin(sr/k,S.fmin,S.fmax),need=yin.N*k+80,buf=new Float32Array(need);
+ return{push(ch){if(ch.length>=need)buf.set(ch.subarray(ch.length-need));else{buf.copyWithin(0,ch.length);buf.set(ch,need-ch.length)}
+  const{y}=decimate(buf,sr),r=yin.run(y,y.length-yin.N);let s=0;for(let i=0;i<ch.length;i++)s+=ch[i]*ch[i];
+  const db=20*Math.log10(Math.sqrt(s/ch.length)+1e-9)+S.calib;return{f0:r.cmnd<.25?r.f0:0,db}}}}
+
+// 整段信号分析：10 ms 帧的 F0 / 声级 / 周期性
+function analyzeSignal(x,sr){
+ const{y,sr:ds}=decimate(x,sr),yin=makeYin(ds,S.fmin,S.fmax),hop=Math.round(ds*.01),fr=[];
+ for(let off=0;off+yin.N<=y.length;off+=hop){const r=yin.run(y,off);fr.push({t:(off+yin.W/2)/ds,f0:r.f0,cm:r.cmnd,nac:r.nac,db:20*Math.log10(r.rms+1e-9)+S.calib})}
+ let maxDb=-1e9;for(const f of fr)if(f.db>maxDb)maxDb=f.db;
+ for(const f of fr)f.v=f.cm<.3&&f.db>maxDb-35;
+ const raw=fr.map(f=>f.f0);
+ for(let i=0;i<fr.length;i++){if(!fr[i].v)continue;const w=[];for(let j=i-3;j<=i+3;j++)if(j>=0&&j<fr.length&&fr[j].v)w.push(raw[j]);const m=median(w);if(Math.abs(12*Math.log2(raw[i]/m))>2.5)fr[i].f0=m}
+ // 去掉短于 50 ms 的孤立浊音段
+ for(let i=0;i<fr.length;){if(!fr[i].v){i++;continue}let j=i;while(j<fr.length&&fr[j].v)j++;if(j-i<5)for(let k=i;k<j;k++)fr[k].v=false;i=j}
+ // 最长连续发声段（允许 100 ms 内的间断），作为 MPT 与默认分析区间
+ let best=null;const runs=[];for(let i=0;i<fr.length;){if(!fr[i].v){i++;continue}let j=i,last=i;while(j<fr.length&&(fr[j].v||j-last<=10)){if(fr[j].v)last=j;j++}runs.push([i,last]);if(!best||last-i>best[1]-best[0])best=[i,last];i=j}
+ const A={x,sr,y,ds,frames:fr,dur:x.length/sr,mpt:best?(best[1]-best[0]+1)*.01:0};
+ // 各次发声（≥0.5 s），用于按次分析
+ A.phons=runs.filter(r=>(r[1]-r[0])*.01>=.5).map(r=>[fr[r[0]].t,fr[r[1]].t]);
+ if(best){const a=fr[best[0]].t,b=fr[best[1]].t,trim=(b-a)*.15;A.sel=[a+trim,b-trim]}else A.sel=[0,A.dur];
+ return A}
+
+function cycleMeasures(A,t0,t1){
+ const x=A.x,sr=A.sr,F=A.frames,base=F.length?F[0].t:0;
+ const f0At=t=>{const i=Math.round((t-base)/.01);for(let d=0;d<6;d++)for(const j of[i-d,i+d])if(j>=0&&j<F.length&&F[j].v)return F[j].f0;return 0};
+ let s=Math.max(1,Math.floor(t0*sr));const e=Math.min(x.length-2,Math.floor(t1*sr));
+ let mx=0,mn=0;for(let i=s;i<e;i++){if(x[i]>mx)mx=x[i];if(x[i]<mn)mn=x[i]}
+ const sg=-mn>mx?-1:1;
+ const am=(a,b)=>{let bi=a,bv=-Infinity;for(let i=a;i<b;i++){const v=sg*x[i];if(v>bv){bv=v;bi=i}}return bi};
+ const refine=p=>{const a=sg*x[p-1],b=sg*x[p],c=sg*x[p+1],den=a-2*b+c;return den<0?p+.5*(a-c)/den:p};
+ const P=[];let p=-1,seg=0,guard=0;
+ while(guard++<200000){
+  if(p<0){const f=f0At(s/sr);if(!f){s+=Math.round(sr*.005);if(s>=e)break;continue}const T=sr/f;if(s+T>=e)break;p=am(s,Math.round(s+T));seg++;P.push({pos:refine(p),p,seg});continue}
+  const f=f0At(p/sr);if(!f){s=p+1;p=-1;continue}
+  const T=sr/f,a=Math.round(p+.75*T),b=Math.round(p+1.25*T);if(b>=e)break;
+  p=am(a,b);P.push({pos:refine(p),p,seg})}
+ // 周期长度用相邻周期波形的互相关求得（比单纯取峰值抗噪）
+ const ccPeriod=(p,T0)=>{const h=Math.round(T0/2),a0=Math.round(T0*.8),a1=Math.round(T0*1.2);if(p-h<0||p+a1+h>=x.length)return T0;
+  let e1=0;for(let j=-h;j<h;j++)e1+=x[p+j]*x[p+j];const c=new Float64Array(a1-a0+1);let bi=0,bv=-2;
+  for(let L=a0;L<=a1;L++){let s=0,e2=0;for(let j=-h;j<h;j++){const v=x[p+L+j];s+=x[p+j]*v;e2+=v*v}const r=e1>0&&e2>0?s/Math.sqrt(e1*e2):0;c[L-a0]=r;if(r>bv){bv=r;bi=L-a0}}
+  if(bi>0&&bi<c.length-1){const den=c[bi-1]-2*c[bi]+c[bi+1];if(den<0)return a0+bi+.5*(c[bi-1]-c[bi+1])/den}return a0+bi};
+ // 周期序列，按连续有效段分组
+ const runs=[];let cur=[];
+ for(let i=0;i+1<P.length;i++){
+  const ok=P[i].seg===P[i+1].seg;const T=ok?ccPeriod(P[i].p,P[i+1].pos-P[i].pos)/sr:0;
+  let lo=Infinity,hi=-Infinity;for(let j=P[i].p;j<P[i+1].p;j++){if(x[j]<lo)lo=x[j];if(x[j]>hi)hi=x[j]}
+  const Am=hi-lo,valid=ok&&T>1/S.fmax&&T<1/S.fmin&&Am>0,prev=cur[cur.length-1];
+  if(valid&&(!prev||Math.max(T,prev.T)/Math.min(T,prev.T)<1.3))cur.push({T,A:Am});
+  else{if(cur.length>1)runs.push(cur);cur=valid?[{T,A:Am}]:[]}}
+ if(cur.length>1)runs.push(cur);
+ let nT=0,sT=0,sA=0,nD=0,dT=0,dA=0,dDb=0,nR=0,rap=0,apq=0,nP=0,ppq=0;
+ for(const r of runs){
+  for(const c of r){nT++;sT+=c.T;sA+=c.A}
+  for(let i=0;i+1<r.length;i++){nD++;dT+=Math.abs(r[i].T-r[i+1].T);dA+=Math.abs(r[i].A-r[i+1].A);dDb+=Math.abs(20*Math.log10(r[i+1].A/r[i].A))}
+  for(let i=1;i+1<r.length;i++){nR++;rap+=Math.abs(r[i].T-(r[i-1].T+r[i].T+r[i+1].T)/3);apq+=Math.abs(r[i].A-(r[i-1].A+r[i].A+r[i+1].A)/3)}
+  for(let i=2;i+2<r.length;i++){nP++;let m=0;for(let j=-2;j<=2;j++)m+=r[i+j].T;ppq+=Math.abs(r[i].T-m/5)}}
+ if(nD<5)return{nCycles:nT};
+ const mT=sT/nT,mA=sA/nT;
+ return{nCycles:nT,jitter:dT/nD/mT*100,rap:nR?rap/nR/mT*100:NaN,ppq5:nP?ppq/nP/mT*100:NaN,shimmer:dA/nD/mA*100,shimDb:dDb/nD,apq3:nR?apq/nR/mA*100:NaN}}
+
+// 倒谱峰突出度 CPP
+function cppMeasure(A,t0,t1){
+ const x=A.x,sr=A.sr;let N=1;while(N<sr*.04)N<<=1;
+ const re=new Float64Array(N),im=new Float64Array(N),w=hann(N),q1=Math.round(sr*.001),qmin=Math.max(q1+1,Math.floor(sr/Math.min(S.fmax,1000))),qmax=Math.min(N/2-1,Math.ceil(sr/S.fmin));
+ const F=A.frames,base=F.length?F[0].t:0,out=[];
+ for(let t=t0;t+N/sr<=t1;t+=.02){const fi=Math.round((t+N/sr/2-base)/.01);if(!F[fi]||!F[fi].v)continue;
+  const off=Math.floor(t*sr);for(let i=0;i<N;i++){re[i]=x[off+i]*w[i];im[i]=0}fft(re,im);
+  for(let i=0;i<N;i++){re[i]=10*Math.log10(re[i]*re[i]+im[i]*im[i]+1e-20);im[i]=0}fft(re,im);
+  let sx=0,sy=0,sxx=0,sxy=0,n=0,pk=-1e9,pq=0;const qa=Math.max(qmin,Math.floor(sr/F[fi].f0/1.15)),qb=Math.min(qmax,Math.ceil(sr/F[fi].f0*1.15));
+  for(let q=q1;q<=qmax;q++){const c=10*Math.log10(re[q]*re[q]+im[q]*im[q]+1e-20);sx+=q;sy+=c;sxx+=q*q;sxy+=q*c;n++;if(q>=qa&&q<=qb&&c>pk){pk=c;pq=q}}
+  const b=(n*sxy-sx*sy)/(n*sxx-sx*sx),a=(sy-b*sx)/n;out.push(pk-(a+b*pq))}
+ return out.length?mean(out):NaN}
+
+function vowelMeasures(A,t0,t1){
+ const fr=A.frames.filter(f=>f.v&&f.t>=t0&&f.t<=t1);if(fr.length<10)return null;
+ const f0=fr.map(f=>f.f0),st=f0.map(hzMidi);
+ const hnr=mean(fr.map(f=>{const r=Math.min(.99999,Math.max(1e-6,f.nac));return 10*Math.log10(r/(1-r))}));
+ const pw=mean(fr.map(f=>10**(f.db/10)));
+ return Object.assign({t0,t1,f0mean:mean(f0),f0sd:sd(f0),f0sdSt:sd(st),f0min:Math.min(...f0),f0max:Math.max(...f0),db:10*Math.log10(pw),hnr,cpp:cppMeasure(A,t0,t1),mpt:A.mpt},cycleMeasures(A,t0,t1))}
+
+// 按次分析：每次发声取中间 70%，再求平均值 ± 标准差（与 DiVAS 的多次发声报告方式一致）
+const PKEYS=['f0mean','jitter','rap','ppq5','shimmer','shimDb','apq3','hnr','cpp','db'];
+function phonMeasures(A){const list=[];
+ A.phons.forEach(([a,b],i)=>{const tr=(b-a)*.15,m=vowelMeasures(A,a+tr,b-tr);if(m&&isFinite(m.jitter)){const o={idx:i+1,start:a,end:b,t0:m.t0,t1:m.t1};for(const k of PKEYS)o[k]=m[k];list.push(o)}});
+ const avg={},dev={};for(const k of PKEYS){const v=list.map(m=>m[k]).filter(v=>isFinite(v));avg[k]=mean(v);dev[k]=sd(v)}
+ return{n:list.length,mean:avg,sd:dev,list}}
+// 有多次发声时取平均值，否则取选区结果
+const vv=(s,k)=>s.phon&&s.phon.n>=2?s.phon.mean[k]:(s.results||{})[k];
+
+// DSI（Wuyts 2000）= 0.13·MPT + 0.0053·F0高 − 0.26·I低 − 1.18·Jitter% + 12.4
+const dsiCalc=(mpt,f0hi,ilow,jit)=>.13*mpt+.0053*f0hi-.26*ilow-1.18*jit+12.4;
+
+/* ============ 音频 I/O ============ */
+const Mic={ctx:null,stream:null,node:null,mr:null,chunks:[],active:false,onForceStop:null,
+ async start(cb,{record=false}={}){
+  await this.stop();
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error('当前浏览器无法使用麦克风，请用 Chrome 或 Edge 打开');
+  const c={echoCancellation:false,noiseSuppression:false,autoGainControl:false};if(S.deviceId)c.deviceId={exact:S.deviceId};
+  try{this.stream=await navigator.mediaDevices.getUserMedia({audio:c})}catch(e){if(S.deviceId){S.deviceId='';saveSettings();delete c.deviceId;this.stream=await navigator.mediaDevices.getUserMedia({audio:c})}else throw e}
+  this.ctx=new(window.AudioContext||window.webkitAudioContext)();await this.ctx.resume();
+  const src=this.ctx.createMediaStreamSource(this.stream),sr=this.ctx.sampleRate;
+  this.node=this.ctx.createScriptProcessor(2048,1,1);
+  this.node.onaudioprocess=e=>cb(new Float32Array(e.inputBuffer.getChannelData(0)),sr);
+  src.connect(this.node);this.node.connect(this.ctx.destination);
+  if(record&&window.MediaRecorder){this.chunks=[];this.mr=new MediaRecorder(this.stream);this.mr.ondataavailable=e=>{if(e.data.size)this.chunks.push(e.data)};this.mr.start(1000)}
+  this.active=true},
+ async stop(){let blob=null;
+  if(this.mr){const mr=this.mr;this.mr=null;if(mr.state!=='inactive')await new Promise(r=>{mr.onstop=r;mr.stop()});blob=new Blob(this.chunks,{type:mr.mimeType||'audio/webm'})}
+  if(this.node){this.node.onaudioprocess=null;this.node.disconnect();this.node=null}
+  if(this.stream){this.stream.getTracks().forEach(t=>t.stop());this.stream=null}
+  if(this.ctx){try{await this.ctx.close()}catch(e){}this.ctx=null}
+  this.active=false;this.onForceStop=null;return blob}};
+async function stopActive(){if(Mic.active){if(Mic.onForceStop)await Mic.onForceStop();else await Mic.stop()}}
+
+function encodeWav(x,sr){const b=new ArrayBuffer(44+x.length*2),v=new DataView(b),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+ w(0,'RIFF');v.setUint32(4,36+x.length*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,x.length*2,true);
+ for(let i=0;i<x.length;i++){const s=Math.max(-1,Math.min(1,x[i]));v.setInt16(44+i*2,s<0?s*32768:s*32767,true)}return new Blob([b],{type:'audio/wav'})}
+async function decodeBlob(blob){const ctx=new(window.AudioContext||window.webkitAudioContext)();try{const ab=await ctx.decodeAudioData(await blob.arrayBuffer());const n=ab.length,x=new Float32Array(n);
+ for(let c=0;c<ab.numberOfChannels;c++){const d=ab.getChannelData(c);for(let i=0;i<n;i++)x[i]+=d[i]/ab.numberOfChannels}return{x,sr:ab.sampleRate}}finally{ctx.close()}}
+function playBlob(blob,t0=0,t1=null){const a=$('#player');if(a._url)URL.revokeObjectURL(a._url);a._url=URL.createObjectURL(blob);a.src=a._url;
+ a.onloadedmetadata=()=>{a.currentTime=t0;a.play()};a.ontimeupdate=()=>{if(t1!=null&&a.currentTime>=t1)a.pause()}}
+function concat(chunks){let n=0;for(const c of chunks)n+=c.length;const x=new Float32Array(n);let o=0;for(const c of chunks){x.set(c,o);o+=c.length}return x}
+
+/* ============ 绘图 ============ */
+function setupCanvas(c,h){const dpr=window.devicePixelRatio||1,w=c.clientWidth||600;c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);c.style.height=h+'px';const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,h);return{g,w,h}}
+function imgOf(w,h,draw){const c=document.createElement('canvas');c.width=w*2;c.height=h*2;const g=c.getContext('2d');g.scale(2,2);g.fillStyle='#fff';g.fillRect(0,0,w,h);draw(g,w,h);return c.toDataURL('image/png')}
+function ticks(a,b,n=6){const step0=(b-a)/n,mag=10**Math.floor(Math.log10(step0)),st=[1,2,2.5,5,10].map(s=>s*mag).find(s=>s>=step0),o=[];for(let v=Math.ceil(a/st)*st;v<=b+1e-9;v+=st)o.push(+v.toFixed(6));return o}
+const M={l:52,r:44,t:10,b:24};
+function axes(g,w,h,o){const m=Object.assign({},M,o.m||{});
+ const X=v=>m.l+(v-o.x0)/(o.x1-o.x0)*(w-m.l-m.r),Y=v=>h-m.b-(v-o.y0)/(o.y1-o.y0)*(h-m.t-m.b);
+ g.font='11px "Microsoft YaHei",system-ui';g.lineWidth=1;
+ for(const t of o.yt||[]){const y=Math.round(Y(t))+.5;g.strokeStyle='#e8ebf0';g.beginPath();g.moveTo(m.l,y);g.lineTo(w-m.r,y);g.stroke();g.fillStyle='#6b7385';g.textAlign='right';g.textBaseline='middle';g.fillText(o.yf?o.yf(t):t,m.l-6,y)}
+ for(const t of o.xt||[]){const x=Math.round(X(t))+.5;g.strokeStyle='#e8ebf0';g.beginPath();g.moveTo(x,m.t);g.lineTo(x,h-m.b);g.stroke();g.fillStyle='#6b7385';g.textAlign='center';g.textBaseline='top';(o.xf?o.xf(t):String(t)).split('\n').forEach((s,i)=>g.fillText(s,x,h-m.b+4+i*12))}
+ g.strokeStyle='#c5cbd6';g.strokeRect(m.l+.5,m.t+.5,w-m.l-m.r-1,h-m.t-m.b-1);
+ if(o.yl){g.save();g.translate(13,(m.t+h-m.b)/2);g.rotate(-Math.PI/2);g.textAlign='center';g.textBaseline='middle';g.fillStyle='#6b7385';g.fillText(o.yl,0,0);g.restore()}
+ return{X,Y,m}}
+function rightAxis(g,w,h,m,y0,y1,yt,label,color){const Y=v=>h-m.b-(v-y0)/(y1-y0)*(h-m.t-m.b);g.fillStyle=color;g.textAlign='left';g.textBaseline='middle';for(const t of yt)g.fillText(t,w-m.r+6,Y(t));
+ if(label){g.save();g.translate(w-10,(m.t+h-m.b)/2);g.rotate(Math.PI/2);g.textAlign='center';g.fillText(label,0,0);g.restore()}return Y}
+
+function drawWave(g,w,h,A,sel){const o=axes(g,w,h,{x0:0,x1:A.dur,y0:-1,y1:1,xt:ticks(0,A.dur,10),yt:[-1,0,1],yl:'波形'});
+ drawSel(g,h,o,sel);const x=A.x,pw=w-o.m.l-o.m.r;let pk=1e-6;for(let i=0;i<x.length;i+=7)pk=Math.max(pk,Math.abs(x[i]));
+ g.strokeStyle='#3b6ea5';g.beginPath();for(let px=0;px<pw;px++){const a=Math.floor(px/pw*x.length),b=Math.floor((px+1)/pw*x.length);let lo=1,hi=-1;for(let i=a;i<b;i++){if(x[i]<lo)lo=x[i];if(x[i]>hi)hi=x[i]}
+  if(hi<lo)continue;g.moveTo(o.m.l+px+.5,o.Y(hi/pk));g.lineTo(o.m.l+px+.5,o.Y(lo/pk)+1)}g.stroke();
+ if(A.phons&&A.phons.length>1){g.font='bold 11px system-ui';g.textAlign='left';g.textBaseline='top';A.phons.forEach(([a,b],i)=>{const xa=o.X(a),xb=o.X(b);g.fillStyle='rgba(28,36,51,.55)';g.fillRect(xa,o.m.t+1,xb-xa,3);g.fillText(i+1,xa+2,o.m.t+6)})}}
+function drawSel(g,h,o,sel){if(!sel)return;g.fillStyle='rgba(37,99,168,.12)';g.fillRect(o.X(sel[0]),o.m.t,o.X(sel[1])-o.X(sel[0]),h-o.m.t-o.m.b);g.strokeStyle='rgba(37,99,168,.6)';g.beginPath();g.moveTo(o.X(sel[0]),o.m.t);g.lineTo(o.X(sel[0]),h-o.m.b);g.moveTo(o.X(sel[1]),o.m.t);g.lineTo(o.X(sel[1]),h-o.m.b);g.stroke()}
+function drawF0(g,w,h,frames,dur,sel){const v=frames.filter(f=>f.v);let lo=v.length?Math.min(...v.map(f=>f.f0)):80,hi=v.length?Math.max(...v.map(f=>f.f0)):400;lo=Math.max(30,lo*.85);hi=hi*1.15;
+ const o=axes(g,w,h,{x0:0,x1:dur,y0:lo,y1:hi,xt:ticks(0,dur,10),yt:ticks(lo,hi,4),yf:t=>Math.round(t),yl:'F0 (Hz)'});drawSel(g,h,o,sel);
+ const Yd=rightAxis(g,w,h,o.m,30,120,[40,60,80,100],'dB','#c08a1e');
+ g.strokeStyle='rgba(214,158,46,.8)';g.lineWidth=1.2;g.beginPath();let pen=false;for(const f of frames){if(f.db<30){pen=false;continue}const X=o.X(f.t),Y=Yd(Math.min(120,f.db));pen?g.lineTo(X,Y):g.moveTo(X,Y);pen=true}g.stroke();
+ g.fillStyle='#2563a8';for(const f of v)g.fillRect(o.X(f.t)-1,o.Y(f.f0)-1,2.4,2.4)}
+function specImage(A,pw,ph){const y=A.y,ds=A.ds,N=512,w=hann(N),re=new Float64Array(N),im=new Float64Array(N),fmax=Math.min(5000,ds/2),bins=Math.floor(fmax/ds*N);
+ const cols=[],img=new ImageData(pw,ph);let gmax=-1e9;
+ for(let c=0;c<pw;c++){const off=Math.floor(c/pw*(y.length-N));for(let i=0;i<N;i++){re[i]=(y[off+i]||0)*w[i];im[i]=0}fft(re,im);const col=new Float32Array(bins);for(let k=0;k<bins;k++){col[k]=10*Math.log10(re[k]*re[k]+im[k]*im[k]+1e-12);if(col[k]>gmax)gmax=col[k]}cols.push(col)}
+ const stops=[[255,255,255],[190,205,230],[80,90,170],[150,40,120],[240,110,60],[255,230,120]];
+ for(let c=0;c<pw;c++)for(let r=0;r<ph;r++){const k=Math.floor((ph-1-r)/ph*bins),v=Math.max(0,Math.min(1,(cols[c][k]-gmax+70)/70)),p=v*(stops.length-1),i=Math.min(stops.length-2,Math.floor(p)),f=p-i,a=stops[i],b=stops[i+1],o=(r*pw+c)*4;
+  img.data[o]=a[0]+(b[0]-a[0])*f;img.data[o+1]=a[1]+(b[1]-a[1])*f;img.data[o+2]=a[2]+(b[2]-a[2])*f;img.data[o+3]=255}
+ const oc=document.createElement('canvas');oc.width=pw;oc.height=ph;oc.getContext('2d').putImageData(img,0,0);return{oc,fmax}}
+function drawSpec(g,w,h,A,sel){const pw=Math.max(10,Math.round(w-M.l-M.r)),ph=Math.max(10,Math.round(h-M.t-M.b));
+ if(!A._spec||A._spec.oc.width!==pw||A._spec.oc.height!==ph)A._spec=specImage(A,pw,ph);
+ g.drawImage(A._spec.oc,M.l,M.t);const o=axes(g,w,h,{x0:0,x1:A.dur,y0:0,y1:A._spec.fmax/1000,xt:ticks(0,A.dur,10),yt:ticks(0,A._spec.fmax/1000,5),yl:'频率 (kHz)'});drawSel(g,h,o,sel)}
+
+const VRP_X=[36,96],VRP_Y=[40,120];
+function drawVrp(g,w,h,pts,live){const o=axes(g,w,h,{x0:VRP_X[0],x1:VRP_X[1],y0:VRP_Y[0],y1:VRP_Y[1],m:{b:34,r:16},yt:ticks(40,120,8),yl:'声压级 (dB)',xt:[36,48,60,72,84,96],xf:m=>noteName(m)+'\n'+Math.round(midiHz(m))+' Hz'});
+ g.strokeStyle='#f1f3f6';for(let m=VRP_X[0];m<=VRP_X[1];m++){if(m%12===0)continue;const x=Math.round(o.X(m))+.5;g.beginPath();g.moveTo(x,o.m.t);g.lineTo(x,h-o.m.b);g.stroke()}
+ const st=vrpStats(pts);
+ if(st){g.beginPath();st.keys.forEach((k,i)=>{const X=o.X(k),Y=o.Y(st.bins[k].max);i?g.lineTo(X,Y):g.moveTo(X,Y)});[...st.keys].reverse().forEach(k=>g.lineTo(o.X(k),o.Y(st.bins[k].min)));g.closePath();g.fillStyle='rgba(37,99,168,.12)';g.fill();g.strokeStyle='#2563a8';g.lineWidth=1.5;g.stroke();g.lineWidth=1}
+ for(const[m,db,md]of pts){g.fillStyle=md?'rgba(220,60,60,.55)':'rgba(40,150,90,.55)';g.fillRect(o.X(m)-1.5,o.Y(db)-1.5,3,3)}
+ if(live&&live.f0>0){const X=o.X(hzMidi(live.f0)),Y=o.Y(live.db);g.strokeStyle='#111';g.lineWidth=2;g.beginPath();g.arc(X,Y,7,0,7);g.stroke();g.lineWidth=1}
+ g.font='11px "Microsoft YaHei",system-ui';g.textAlign='left';g.fillStyle='rgba(40,150,90,1)';g.fillText('● 轻声',o.m.l+8,o.m.t+12);g.fillStyle='rgba(220,60,60,1)';g.fillText('● 响声',o.m.l+60,o.m.t+12)}
+function vrpStats(pts){const bins={};for(const[m,db]of pts){const k=Math.round(m),b=bins[k]||(bins[k]={min:db,max:db,n:0});b.min=Math.min(b.min,db);b.max=Math.max(b.max,db);b.n++}
+ const keys=Object.keys(bins).map(Number).filter(k=>bins[k].n>=2).sort((a,b)=>a-b);if(!keys.length)return null;
+ let il=1e9,ih=-1e9,area=0;for(const k of keys){il=Math.min(il,bins[k].min);ih=Math.max(ih,bins[k].max);area+=bins[k].max-bins[k].min}
+ const lo=keys[0],hi=keys[keys.length-1];return{bins,keys,lo,hi,range:hi-lo,f0lo:midiHz(lo),f0hi:midiHz(hi),ilow:il,ihigh:ih,area}}
+
+function drawStrain(g,w,h,res){const{plan,secs}=res,T=plan.levels.length*plan.secDur,h1=Math.round(h*.55);
+ const o=axes(g,w,h1,{x0:0,x1:T,y0:50,y1:100,xt:[],yt:[50,60,70,80,90,100],yl:'声级 dB',m:{b:6}});
+ plan.levels.forEach((L,i)=>{g.fillStyle='rgba(47,133,90,.14)';g.fillRect(o.X(i*plan.secDur),o.Y(L+plan.tol),o.X((i+1)*plan.secDur)-o.X(i*plan.secDur),o.Y(L-plan.tol)-o.Y(L+plan.tol));g.strokeStyle='rgba(47,133,90,.7)';g.beginPath();g.moveTo(o.X(i*plan.secDur),o.Y(L));g.lineTo(o.X((i+1)*plan.secDur),o.Y(L));g.stroke()});
+ g.strokeStyle='#c08a1e';g.lineWidth=1.5;g.beginPath();let pen=false;for(const s of secs){if(s.db==null){pen=false;continue}const X=o.X(s.t+.5),Y=o.Y(Math.max(50,Math.min(100,s.db)));pen?g.lineTo(X,Y):g.moveTo(X,Y);pen=true}g.stroke();g.lineWidth=1;
+ g.translate(0,h1);const v=secs.filter(s=>s.f0);let lo=v.length?Math.min(...v.map(s=>s.f0))*.9:80,hi=v.length?Math.max(...v.map(s=>s.f0))*1.1:400;
+ const tm=T>=120,o2=axes(g,w,h-h1,{x0:0,x1:T,y0:lo,y1:hi,xt:tm?ticks(0,T/60,8).map(v=>v*60):ticks(0,T,10),xf:t=>tm?+(t/60).toFixed(2)+' 分':t+' 秒',yt:ticks(lo,hi,4),yf:t=>Math.round(t),yl:'F0 Hz',m:{t:6}});
+ g.strokeStyle='#2563a8';g.lineWidth=1.5;g.beginPath();pen=false;for(const s of secs){if(!s.f0){pen=false;continue}const X=o2.X(s.t+.5),Y=o2.Y(s.f0);pen?g.lineTo(X,Y):g.moveTo(X,Y);pen=true}g.stroke();g.lineWidth=1;
+ g.strokeStyle='#cfd5de';g.setLineDash([3,3]);for(let i=1;i<plan.levels.length;i++){const X=Math.round(o2.X(i*plan.secDur))+.5;g.beginPath();g.moveTo(X,-h1+M.t);g.lineTo(X,h-h1-o2.m.b);g.stroke()}g.setLineDash([]);g.translate(0,-h1)}
+
+/* ============ 应用状态 ============ */
+let clients=[],sessions=[];const cur={cid:null,tab:'overview'};let V=null,R=null,ST=null;
+const client=()=>clients.find(c=>c.id===cur.cid);
+async function loadSessions(){sessions=(await DB.byClient(cur.cid)).sort((a,b)=>b.created-a.created)}
+async function touchClient(){const c=client();if(c){c.updated=Date.now();await DB.put('clients',c);renderSidebar()}}
+
+function renderSidebar(){const q=$('#search').value.trim().toLowerCase();
+ const list=clients.filter(c=>!q||c.name.toLowerCase().includes(q)||(c.code||'').toLowerCase().includes(q)).sort((a,b)=>(b.updated||0)-(a.updated||0));
+ $('#clientList').innerHTML=list.map(c=>`<div class="ci ${c.id===cur.cid?'on':''}" onclick="selectClient('${c.id}')"><div class="cn">${esc(c.name)}</div><div class="cm">${esc([c.code,c.voice].filter(Boolean).join(' · '))||'&nbsp;'}</div></div>`).join('')||'<div class="empty-s">还没有学员，点“+ 新建”添加。</div>'}
+async function selectClient(id){await stopActive();cur.cid=id;V=R=ST=null;await loadSessions();renderSidebar();renderMain()}
+const age=b=>{if(!b)return'';const d=new Date(b),n=new Date();let a=n.getFullYear()-d.getFullYear();if(n<new Date(n.getFullYear(),d.getMonth(),d.getDate()))a--;return isFinite(a)?a+' 岁':''};
+
+function renderMain(){const c=client();
+ if(!c){$('#main').innerHTML=`<div class="welcome"><h2>嗓音分析工作站</h2><p>为声乐 / 播音工作室设计的嗓音评估工具。所有录音和数据只保存在这台电脑的浏览器中。</p>
+  <div class="mods"><div><b>唱音分析</b>持续元音的 F0、Jitter、Shimmer、HNR、CPP、MPT，配合 GRBAS 主观评分</div><div><b>音域测量</b>实时绘制声域图（Phonetogram），得到音域、最小/最大声强与 DSI</div><div><b>疲劳测试</b>按目标声级朗读，记录声级与基频随时间的变化</div><div><b>评估报告</b>汇总各项结果，可直接打印或另存为 PDF</div></div>
+  <button class="btn primary" onclick="editClient()">+ 新建第一位学员</button><p class="hint" style="margin-top:20px">首次使用建议先在“设置与校准”里用声级计校准麦克风，否则 dB 数值只是相对值。</p></div>`;return}
+ const tabs=[['overview','概览'],['vowel','唱音分析'],['vrp','音域测量'],['strain','疲劳测试'],['report','评估报告']];
+ $('#main').innerHTML=`<div class="head"><h1>${esc(c.name)} <span class="meta">${esc([c.code,c.sex,age(c.birth),c.voice].filter(Boolean).join(' · '))}</span><button class="btn sm" onclick="editClient('${c.id}')">编辑资料</button></h1>
+  <div class="tabs">${tabs.map(([k,n])=>`<button class="tab ${cur.tab===k?'on':''}" onclick="setTab('${k}')">${n}</button>`).join('')}</div></div><div id="content"></div>`;
+ ({overview:viewOverview,vowel:viewVowel,vrp:viewVrp,strain:viewStrain,report:viewReport})[cur.tab]()}
+async function setTab(t){if(t!==cur.tab)await stopActive();cur.tab=t;renderMain()}
+
+/* ---------- 弹窗 ---------- */
+function modal(html){const d=document.createElement('div');d.className='ovl';d.innerHTML=`<div class="modal">${html}</div>`;d.addEventListener('mousedown',e=>{if(e.target===d)closeModal()});document.body.appendChild(d);return d}
+async function closeModal(){const d=$('.ovl');if(d){if(d._onclose)await d._onclose();d.remove()}}
+
+function editClient(id){const c=clients.find(x=>x.id===id)||{};
+ const voices=['女高音','女中音','女低音','男高音','男中音','男低音','童声','播音/主持','言语/其他'];
+ modal(`<h3>${id?'编辑学员':'新建学员'}</h3><div class="form">
+  <label>姓名 *</label><input class="inp" id="fName" value="${esc(c.name)}">
+  <label>编号</label><input class="inp" id="fCode" value="${esc(c.code)}">
+  <label>性别</label><select class="inp" id="fSex">${['','女','男'].map(s=>`<option ${c.sex===s?'selected':''}>${s}</option>`).join('')}</select>
+  <label>出生日期</label><input class="inp" type="date" id="fBirth" value="${esc(c.birth)}">
+  <label>声部/类型</label><select class="inp" id="fVoice"><option></option>${voices.map(s=>`<option ${c.voice===s?'selected':''}>${s}</option>`).join('')}</select>
+  <label>电话</label><input class="inp" id="fPhone" value="${esc(c.phone)}">
+  <label class="full">备注（嗓音史、训练目标、就诊情况等）</label><textarea class="inp full" id="fNotes" rows="3">${esc(c.notes)}</textarea></div>
+  <div class="acts">${id?`<button class="btn danger" onclick="deleteClient('${id}')" style="margin-right:auto">删除学员</button>`:''}<button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="saveClient('${id||''}')">保存</button></div>`);
+ setTimeout(()=>$('#fName').focus(),0)}
+async function saveClient(id){const name=$('#fName').value.trim();if(!name){toast('请填写姓名');return}
+ const c=clients.find(x=>x.id===id)||{id:uid(),created:Date.now()};
+ Object.assign(c,{name,code:$('#fCode').value.trim(),sex:$('#fSex').value,birth:$('#fBirth').value,voice:$('#fVoice').value,phone:$('#fPhone').value.trim(),notes:$('#fNotes').value.trim(),updated:Date.now()});
+ await DB.put('clients',c);if(!clients.includes(c))clients.push(c);closeModal();
+ if(cur.cid!==c.id)await selectClient(c.id);else{renderSidebar();renderMain()}}
+async function deleteClient(id){const n=(await DB.byClient(id)).length;if(!confirm(`确定删除该学员及其 ${n} 条测试记录？此操作不可恢复。`))return;
+ for(const s of await DB.byClient(id))await DB.del('sessions',s.id);await DB.del('clients',id);clients=clients.filter(c=>c.id!==id);cur.cid=null;closeModal();renderSidebar();renderMain()}
+
+/* ---------- 概览 ---------- */
+function computeDsi(list){const vs=list.filter(s=>s.type==='vowel'&&s.results),vr=list.filter(s=>s.type==='vrp'&&s.results);
+ const withJ=vs.filter(s=>isFinite(vv(s,'jitter')));if(!withJ.length||!vr.length)return null;
+ const mpt=Math.max(...vs.map(s=>s.results.mpt||0)),jit=vv(withJ[0],'jitter'),r=vr[0].results;
+ return{dsi:dsiCalc(mpt,r.f0hi,r.ilow,jit),mpt,jit,f0hi:r.f0hi,ilow:r.ilow}}
+function dsiHtml(d){if(!d)return`<div class="hint">需要至少一次唱音分析（提供 Jitter、MPT）和一次音域测量（提供最高音、最小声强）才能计算 DSI。</div>`;
+ const p=Math.max(0,Math.min(100,(d.dsi+5)/10*100));
+ return`<div class="stat"><span class="k">嗓音障碍严重指数 DSI</span><span class="v">${fx(d.dsi,1)}</span></div><div class="dsi-bar"><i style="left:${p}%"></i></div><div class="dsi-scale"><span>−5 重度</span><span>0</span><span>+5 正常</span></div>
+  <div class="hint" style="margin-top:8px">MPT ${fx(d.mpt)} s · F0高 ${fx(d.f0hi,0)} Hz · I低 ${fx(d.ilow)} dB · Jitter ${fx(d.jit,2)}%。约 +1.6 以上通常视为正常范围（参考值，取决于校准）。</div>`}
+function summary(s){const r=s.results||{};
+ if(s.type==='vowel')return`F0 ${fx(vv(s,'f0mean'))} Hz · Jitter ${fx(vv(s,'jitter'),2)}% · Shimmer ${fx(vv(s,'shimmer'),2)}% · HNR ${fx(vv(s,'hnr'))} dB · MPT ${fx(r.mpt)} s`+(s.phon&&s.phon.n>=2?`（${s.phon.n} 次平均）`:'');
+ if(s.type==='vrp')return r.lo!=null?`${noteName(r.lo)}–${noteName(r.hi)}（${r.range} 半音）· ${fx(r.ilow,0)}–${fx(r.ihigh,0)} dB`:'无有效数据';
+ if(s.type==='strain'){const st=r.stats||[];const f=st.filter(x=>isFinite(x.f0));return`${st.length} 段 · 达标率 ${fx(mean(st.map(x=>x.inTarget)).valueOf()*100,0)}%`+(f.length>1?` · F0 变化 ${fx(12*Math.log2(f[f.length-1].f0/f[0].f0),1)} 半音`:'')+(r.pre!=null&&r.post!=null?` · 疲劳自评 ${r.pre}→${r.post}`:'')}return''}
+function viewOverview(){const c=client(),vs=sessions.filter(s=>s.type==='vowel').slice().reverse(),last=t=>sessions.find(s=>s.type===t);const lv=last('vowel'),lr=last('vrp');
+ $('#content').innerHTML=`<div class="grid3">
+  <div class="card"><h3>最近一次唱音分析</h3>${lv?`<div class="sub">${fmtDate(lv.created)} ${esc(lv.label)}</div><table class="kv"><tr><td>F0</td><td class="num">${fx(vv(lv,'f0mean'))} Hz</td></tr><tr><td>Jitter</td><td class="num">${fx(vv(lv,'jitter'),2)} %</td></tr><tr><td>Shimmer</td><td class="num">${fx(vv(lv,'shimmer'),2)} %</td></tr><tr><td>HNR</td><td class="num">${fx(vv(lv,'hnr'))} dB</td></tr></table>${lv.phon&&lv.phon.n>=2?`<div class="hint">${lv.phon.n} 次发声的平均值</div>`:''}`:'<div class="hint">暂无</div>'}</div>
+  <div class="card"><h3>最近一次音域测量</h3>${lr&&lr.results.lo!=null?`<div class="sub">${fmtDate(lr.created)}</div><table class="kv"><tr><td>音域</td><td class="num">${noteName(lr.results.lo)} – ${noteName(lr.results.hi)}</td></tr><tr><td>跨度</td><td class="num">${lr.results.range} 半音</td></tr><tr><td>声强范围</td><td class="num">${fx(lr.results.ilow,0)} – ${fx(lr.results.ihigh,0)} dB</td></tr></table>`:'<div class="hint">暂无</div>'}</div>
+  <div class="card"><h3>DSI</h3>${dsiHtml(computeDsi(sessions))}</div></div>
+  ${vs.length>1?`<div class="card"><h3>唱音分析历次对比</h3><table class="kv"><tr><th>日期</th><th>标签</th><th>F0 Hz</th><th>Jitter %</th><th>Shimmer %</th><th>HNR dB</th><th>CPP dB</th><th>MPT s</th><th>发声次数</th><th>G R B A S</th></tr>
+   ${vs.map(s=>{const r=s.results,g=s.grbas||{};return`<tr><td>${fmtDate(s.created)}</td><td>${esc(s.label)}</td><td class="num">${fx(vv(s,'f0mean'))}</td><td class="num">${fx(vv(s,'jitter'),2)}</td><td class="num">${fx(vv(s,'shimmer'),2)}</td><td class="num">${fx(vv(s,'hnr'))}</td><td class="num">${fx(vv(s,'cpp'))}</td><td class="num">${fx(r.mpt)}</td><td class="num">${s.phon?s.phon.n:'—'}</td><td>${'GRBAS'.split('').map(k=>g[k]??'-').join(' ')}</td></tr>`}).join('')}</table></div>`:''}
+  <div class="card"><h3>全部测试记录（${sessions.length}）</h3>${sessions.length?`<table class="kv"><tr><th>时间</th><th>类型</th><th>标签</th><th>主要结果</th><th></th></tr>${sessions.map(s=>`<tr><td style="white-space:nowrap">${fmtDate(s.created)}</td><td><span class="tag ${s.type}">${TYPE[s.type]}</span></td><td>${esc(s.label)}</td><td>${summary(s)}</td><td style="white-space:nowrap;text-align:right"><button class="btn sm" onclick="openSession('${s.id}')">打开</button> <button class="btn sm danger" onclick="delSession('${s.id}')">删除</button></td></tr>`).join('')}</table>`:'<div class="hint">还没有测试记录。从上方的“唱音分析”“音域测量”或“疲劳测试”开始。</div>'}</div>
+  ${c.notes?`<div class="card"><h3>备注</h3><div style="white-space:pre-wrap">${esc(c.notes)}</div></div>`:''}`}
+async function delSession(id){if(!confirm('确定删除这条测试记录？'))return;await DB.del('sessions',id);await loadSessions();renderMain()}
+async function openSession(id){const s=sessions.find(x=>x.id===id);if(!s)return;
+ if(s.type==='vowel'){toast('正在载入录音…');const{x,sr}=await decodeBlob(s.audio);const A=analyzeSignal(x,sr);A.sel=[s.results.t0,s.results.t1];V={A,blob:s.audio,res:s.results,label:s.label,grbas:Object.assign({},s.grbas),comment:s.comment||'',savedId:s.id,created:s.created};cur.tab='vowel'}
+ if(s.type==='vrp'){R={pts:s.points||[],mode:'soft',blob:s.audio,label:s.label,savedId:s.id,created:s.created,comment:s.comment||''};cur.tab='vrp'}
+ if(s.type==='strain'){ST={phase:'done',res:s.results,blob:s.audio,label:s.label,savedId:s.id,created:s.created};cur.tab='strain'}
+ renderMain()}
+
+/* ---------- 唱音分析 ---------- */
+const VREF={jitter:[1.04,'≤ 1.04'],rap:[.68,'≤ 0.68'],ppq5:[.84,'≤ 0.84'],shimmer:[3.81,'≤ 3.81'],shimDb:[.35,'≤ 0.35'],hnr:[-20,'≥ 20'],mpt:[-10,'≥ 10']};
+function refDot(k,v){const r=VREF[k];if(!r||!isFinite(v))return'<span class="dot"></span>';const ok=r[0]>0?v<=r[0]:v>=-r[0];return`<span class="dot ${ok?'ok':'warn'}"></span>`}
+function viewVowel(){
+ $('#content').innerHTML=`<div class="toolbar"><button class="btn primary" id="vRec" onclick="vowelRec()">● 开始录音</button>
+  <label class="btn">导入音频<input type="file" accept="audio/*,.wav,.ogg,.mp3,.m4a" hidden onchange="vowelImport(this)"></label>
+  <input id="vLabel" class="inp" style="width:220px" placeholder="标签，如 /a/ 舒适音高" value="${esc(V?V.label:'/a/ 舒适音高')}" oninput="if(V)V.label=this.value">
+  <span class="grow"></span>${V?`<button class="btn" onclick="vowelPlay(true)">▶ 播放选区</button><button class="btn" onclick="vowelPlay(false)">▶ 全部</button><button class="btn" onclick="V=null;viewVowel()">新的测试</button><button class="btn primary" onclick="vowelSave()">${V.savedId?'更新记录':'保存记录'}</button>`:''}</div>
+  <div class="live" id="vLive" style="${Mic.active?'':'display:none'}"><span class="big" id="vT">00:00</span><div class="meter"><i id="vM"></i></div><span class="val">F0 <b id="vF">—</b> Hz</span><span class="val"><b id="vN">—</b></span><span class="val"><b id="vD">—</b> dB</span></div>
+  ${V?`<div class="card views"><canvas id="cWave"></canvas><canvas id="cF0"></canvas><canvas id="cSpec"></canvas><div class="hint" style="margin-top:6px">在任一图上拖动鼠标选择分析区间（默认取最长一次发声的中段）。波形上方的编号是自动识别出的各次发声。</div></div>
+  <div class="card"><h3>各次发声（平均值 ± 标准差）</h3><div id="vPhon"></div></div>
+  <div class="grid2"><div class="card"><h3>声学参数</h3><div id="vRes"></div></div>
+  <div class="card"><h3>GRBAS 主观听感评分</h3><div class="grbas">${[['G','总嘶哑度'],['R','粗糙度'],['B','气息度'],['A','无力度'],['S','紧张度']].map(([k,n])=>`<label><b>${k}</b>${n}<select class="inp" onchange="V.grbas.${k}=+this.value">${[0,1,2,3].map(i=>`<option ${(V.grbas[k]||0)===i?'selected':''}>${i}</option>`).join('')}</select></label>`).join('')}</div>
+   <div class="hint" style="margin-bottom:6px">0 正常 · 1 轻度 · 2 中度 · 3 重度</div><textarea class="inp" rows="5" placeholder="听感描述、训练建议…" oninput="V.comment=this.value">${esc(V.comment)}</textarea></div></div>`
+  :`<div class="placeholder"><p style="font-size:15px;color:var(--ink)">点击“开始录音”，或导入已有的录音文件（WAV / OGG / MP3 / M4A，可直接导入原来软件导出的 soundfile.wav）</p>
+   <p>测试方法：麦克风距嘴约 30 cm，以舒适的音高和音量持续发 /a/ 3 秒以上；测量最长发声时间（MPT）时请深吸气后尽可能长地发音。</p></div>`}`;
+ if(V)drawVowel()}
+function drawVowel(){if(!V||!$('#cWave'))return;const A=V.A;
+ let c=setupCanvas($('#cWave'),130);drawWave(c.g,c.w,c.h,A,A.sel);
+ c=setupCanvas($('#cF0'),150);drawF0(c.g,c.w,c.h,A.frames,A.dur,A.sel);
+ c=setupCanvas($('#cSpec'),170);drawSpec(c.g,c.w,c.h,A,A.sel);
+ if(!V.res||V.res.t0!==A.sel[0]||V.res.t1!==A.sel[1])V.res=vowelMeasures(A,A.sel[0],A.sel[1]);
+ const r=V.res;$('#vRes').innerHTML=r?`<table class="kv"><tr><th>参数</th><th>数值</th><th>参考</th></tr>
+  <tr><td>平均基频 F0</td><td class="num">${fx(r.f0mean)} Hz <span class="hint">${noteName(hzMidi(r.f0mean))}</span></td><td class="ref"></td></tr>
+  <tr><td>F0 标准差</td><td class="num">${fx(r.f0sd,2)} Hz / ${fx(r.f0sdSt,2)} 半音</td><td class="ref"></td></tr>
+  <tr><td>F0 范围</td><td class="num">${fx(r.f0min)} – ${fx(r.f0max)} Hz</td><td class="ref"></td></tr>
+  <tr><td>平均声级</td><td class="num">${fx(r.db)} dB</td><td class="ref">需校准</td></tr>
+  ${[['jitter','Jitter (local)','%',2],['rap','Jitter RAP','%',2],['ppq5','Jitter PPQ5','%',2],['shimmer','Shimmer (local)','%',2],['shimDb','Shimmer','dB',2],['apq3','Shimmer APQ3','%',2],['hnr','谐噪比 HNR','dB',1],['cpp','倒谱峰突出度 CPP','dB',1],['mpt','最长发声时间 MPT','s',1]].map(([k,n,u,d])=>`<tr><td>${refDot(k,r[k])}${n}</td><td class="num">${fx(r[k],d)} ${u}</td><td class="ref">${VREF[k]?VREF[k][1]:''}</td></tr>`).join('')}
+  <tr><td>有效周期 / 分析区间</td><td class="num">${r.nCycles||0} 个 / ${fx(r.t1-r.t0,2)} s</td><td class="ref"></td></tr></table>
+  <div class="hint" style="margin-top:8px">参考值为 MDVP 常用阈值，仅供对照；不同软件算法不同，建议以同一工具的前后对比为主。</div>`:'<div class="hint">选区内有效发声太短，无法计算。请选择持续发声的区段。</div>';
+ if(!V.phon)V.phon=phonMeasures(A);
+ const P=V.phon,cols=[['f0mean','F0 Hz',1],['jitter','Jitter %',2],['shimmer','Shimmer %',2],['hnr','HNR dB',1],['cpp','CPP dB',1],['db','声级 dB',1]];
+ $('#vPhon').innerHTML=P.n?`<table class="kv"><tr><th>次</th><th>时间 (s)</th>${cols.map(c=>`<th>${c[1]}</th>`).join('')}<th></th></tr>
+  ${P.list.map((m,i)=>`<tr${Math.abs(A.sel[0]-m.t0)<1e-6&&Math.abs(A.sel[1]-m.t1)<1e-6?' style="background:var(--accent-2)"':''}><td>${m.idx}</td><td>${fx(m.start,1)}–${fx(m.end,1)}</td>${cols.map(c=>`<td class="num">${fx(m[c[0]],c[2])}</td>`).join('')}<td style="text-align:right"><button class="btn sm" onclick="selPhon(${i})">查看</button></td></tr>`).join('')}
+  ${P.n>=2?`<tr style="border-top:2px solid var(--line)"><td colspan="2"><b>平均 ± SD</b>（${P.n} 次）</td>${cols.map(c=>`<td class="num">${fx(P.mean[c[0]],c[2])} <span class="hint">± ${fx(P.sd[c[0]],c[2])}</span></td>`).join('')}<td></td></tr>`:''}</table>
+  <div class="hint" style="margin-top:8px">每次发声取中间 70% 计算，再求平均值和标准差（与原 DiVAS 报告方式一致）。有多次发声时，概览、DSI 和报告使用平均值。</div>`
+  :'<div class="hint">没有找到长于 0.5 秒的完整发声。</div>';
+ bindSel()}
+function selPhon(i){const m=V.phon.list[i];V.A.sel=[m.t0,m.t1];drawVowel()}
+function bindSel(){const views=document.querySelectorAll('.views canvas');let drag=null;
+ const tAt=(cv,e)=>{const r=cv.getBoundingClientRect(),pw=r.width-M.l-M.r;return Math.max(0,Math.min(V.A.dur,(e.clientX-r.left-M.l)/pw*V.A.dur))};
+ views.forEach(cv=>{cv.onmousedown=e=>{drag={cv,t:tAt(cv,e)}};});
+ window.onmousemove=e=>{if(!drag||!V)return;const t=tAt(drag.cv,e);V.A.sel=[Math.min(drag.t,t),Math.max(drag.t,t)];quickSel()};
+ window.onmouseup=()=>{if(!drag||!V)return;drag=null;if(V.A.sel[1]-V.A.sel[0]<.1){toast('选区太短');return}drawVowel()}}
+function quickSel(){const A=V.A;let c=setupCanvas($('#cWave'),130);drawWave(c.g,c.w,c.h,A,A.sel);c=setupCanvas($('#cF0'),150);drawF0(c.g,c.w,c.h,A.frames,A.dur,A.sel);c=setupCanvas($('#cSpec'),170);drawSpec(c.g,c.w,c.h,A,A.sel)}
+let vRecState=null;
+async function vowelRec(){
+ if(vRecState){await vRecState.stop();return}
+ const chunks=[];let rt=null,sr=0,t0=performance.now(),h=0;
+ const stop=async()=>{if(!vRecState)return;vRecState=null;clearInterval(h);await Mic.stop();
+  if(!sr||!chunks.length){viewVowel();return}const x=concat(chunks);if(x.length<sr*.5){toast('录音太短');viewVowel();return}
+  setVowel(x,sr,encodeWav(x,sr))};
+ try{await Mic.start((d,s)=>{sr=s;chunks.push(d);if(!rt)rt=makeRT(s);const r=rt.push(d);vLive(r)})}catch(e){toast('无法打开麦克风：'+e.message,5000);return}
+ vRecState={stop};Mic.onForceStop=stop;
+ const b=$('#vRec');b.textContent='■ 停止录音';b.className='btn rec';$('#vLive').style.display='';
+ h=setInterval(()=>{const s=(performance.now()-t0)/1000;const el=$('#vT');if(el)el.textContent=`${pad(Math.floor(s/60))}:${pad(Math.floor(s%60))}`;if(s>=90)stop()},200)}
+function vLive(r){const m=$('#vM');if(!m)return;m.style.width=Math.max(0,Math.min(100,(r.db-30)/80*100))+'%';$('#vD').textContent=fx(r.db,0);$('#vF').textContent=r.f0?fx(r.f0):'—';$('#vN').textContent=r.f0?noteName(hzMidi(r.f0)):'—'}
+function setVowel(x,sr,blob){const A=analyzeSignal(x,sr);V={A,blob,res:null,label:$('#vLabel')?$('#vLabel').value:'',grbas:{G:0,R:0,B:0,A:0,S:0},comment:'',savedId:null,created:Date.now()};viewVowel();if(!A.frames.some(f=>f.v))toast('没有检测到稳定的发声，请检查麦克风音量',4000)}
+async function vowelImport(inp){const f=inp.files[0];if(!f)return;try{toast('正在分析…');const{x,sr}=await decodeBlob(f);setVowel(x,sr,f.type==='audio/wav'||/\.wav$/i.test(f.name)?f:encodeWav(x,sr));if(V)V.label=V.label||f.name}catch(e){toast('无法读取该音频文件：'+e.message,5000)}}
+function vowelPlay(sel){if(V)playBlob(V.blob,sel?V.A.sel[0]:0,sel?V.A.sel[1]:null)}
+async function vowelSave(){if(!V||!V.res){toast('没有可保存的结果');return}
+ const A=V.A,tr=[],step=Math.max(1,Math.ceil(A.frames.length/900));for(let i=0;i<A.frames.length;i+=step){const f=A.frames[i];tr.push([+f.t.toFixed(3),f.v?+f.f0.toFixed(1):0,+f.db.toFixed(1)])}
+ const s={id:V.savedId||uid(),clientId:cur.cid,type:'vowel',created:V.created,label:$('#vLabel').value.trim(),results:V.res,phon:V.phon,grbas:V.grbas,comment:V.comment,track:tr,dur:A.dur,audio:V.blob};
+ await DB.put('sessions',s);V.savedId=s.id;await loadSessions();await touchClient();toast('已保存');viewVowel()}
+
+/* ---------- 音域测量 ---------- */
+let vrpRaf=0,vrpLive=null;
+function viewVrp(){if(!R)R={pts:[],mode:'soft',blob:null,savedId:null,created:Date.now(),label:'',comment:''};
+ const st=vrpStats(R.pts),d=st&&computeDsi([{type:'vrp',results:st},...sessions.filter(s=>s.type==='vowel')]);
+ $('#content').innerHTML=`<div class="toolbar"><button class="btn primary" id="rRec" onclick="vrpRec()">${Mic.active?'■ 停止':'● 开始测量'}</button>
+  <span class="seg"><button class="${R.mode==='soft'?'on':''}" onclick="R.mode='soft';this.classList.add('on');this.nextElementSibling.classList.remove('on')">轻声</button><button class="${R.mode==='loud'?'on':''}" onclick="R.mode='loud';this.classList.add('on');this.previousElementSibling.classList.remove('on')">响声</button></span>
+  <button class="btn" onclick="if(confirm('清除当前声域图？')){R.pts=[];R.blob=null;viewVrp()}">清除</button>
+  <span class="grow"></span>${R.blob?'<button class="btn" onclick="playBlob(R.blob)">▶ 回放</button>':''}<button class="btn" onclick="R=null;viewVrp()">新的测试</button><button class="btn primary" onclick="vrpSave()">${R.savedId?'更新记录':'保存记录'}</button></div>
+  <div class="live"><span class="big" id="rN">—</span><span class="val">F0 <b id="rF">—</b> Hz</span><span class="val">声级 <b id="rD">—</b> dB</span><div class="meter"><i id="rM"></i></div></div>
+  <div class="grid2"><div class="card"><canvas id="cVrp"></canvas><div class="hint" style="margin-top:6px">步骤：① 选“轻声”，用尽可能轻的声音从最低音逐个半音（或慢速滑音）唱到最高音；② 选“响声”，用尽可能响的声音再唱一遍。每个音保持约 1 秒。</div></div>
+  <div><div class="card"><h3>结果</h3>${st?`<table class="kv"><tr><td>最低音</td><td class="num">${noteName(st.lo)}（${fx(st.f0lo,0)} Hz）</td></tr><tr><td>最高音</td><td class="num">${noteName(st.hi)}（${fx(st.f0hi,0)} Hz）</td></tr><tr><td>音域跨度</td><td class="num">${st.range} 半音（${fx(st.range/12,1)} 个八度）</td></tr><tr><td>最小声强 I低</td><td class="num">${fx(st.ilow)} dB</td></tr><tr><td>最大声强 I高</td><td class="num">${fx(st.ihigh)} dB</td></tr><tr><td>动态范围</td><td class="num">${fx(st.ihigh-st.ilow)} dB</td></tr><tr><td>声域图面积</td><td class="num">${fx(st.area,0)} dB·半音</td></tr><tr><td>采样点</td><td class="num">${R.pts.length}</td></tr></table>`:'<div class="hint">开始测量后这里会显示结果。</div>'}</div>
+  <div class="card"><h3>DSI</h3>${dsiHtml(d)}</div><div class="card"><h3>备注</h3><textarea class="inp" rows="3" oninput="R.comment=this.value">${esc(R.comment)}</textarea></div></div></div>`;
+ drawVrpNow()}
+function drawVrpNow(){const cv=$('#cVrp');if(!cv)return;const c=setupCanvas(cv,440);drawVrp(c.g,c.w,c.h,R.pts,vrpLive)}
+async function vrpRec(){
+ if(Mic.active){await Mic.onForceStop();return}
+ let rt=null,prev=null,n=0;
+ const stop=async()=>{const blob=await Mic.stop();if(blob&&blob.size){R.blob=R.blob?new Blob([R.blob,blob],{type:blob.type}):blob}vrpLive=null;viewVrp()};
+ try{await Mic.start((d,sr)=>{if(!rt)rt=makeRT(sr);const r=rt.push(d);vrpLive=r;
+  if(r.f0>0&&r.db>=VRP_Y[0]&&r.db<=VRP_Y[1]){const m=hzMidi(r.f0);if(prev!=null&&Math.abs(m-prev)<1&&m>=VRP_X[0]&&m<=VRP_X[1]&&R.pts.length<30000)R.pts.push([+m.toFixed(2),+r.db.toFixed(1),R.mode==='loud'?1:0]);prev=m}else prev=null;
+  if(!vrpRaf)vrpRaf=requestAnimationFrame(()=>{vrpRaf=0;drawVrpNow();const el=$('#rN');if(!el)return;el.textContent=r.f0?noteName(hzMidi(r.f0)):'—';$('#rF').textContent=r.f0?fx(r.f0):'—';$('#rD').textContent=fx(r.db,0);$('#rM').style.width=Math.max(0,Math.min(100,(r.db-30)/80*100))+'%'})},{record:true})}catch(e){toast('无法打开麦克风：'+e.message,5000);return}
+ Mic.onForceStop=stop;const b=$('#rRec');b.textContent='■ 停止';b.className='btn rec'}
+async function vrpSave(){const st=vrpStats(R.pts);if(!st){toast('还没有有效的测量数据');return}
+ const s={id:R.savedId||uid(),clientId:cur.cid,type:'vrp',created:R.created,label:R.label||'',results:st&&{lo:st.lo,hi:st.hi,range:st.range,f0lo:st.f0lo,f0hi:st.f0hi,ilow:st.ilow,ihigh:st.ihigh,area:st.area},points:R.pts,comment:R.comment,audio:R.blob};
+ await DB.put('sessions',s);R.savedId=s.id;await loadSessions();await touchClient();toast('已保存');viewVrp()}
+
+/* ---------- 疲劳测试 ---------- */
+const DEFAULT_TEXT='清晨的风从河面吹过来，带着一点潮湿的青草味。街口的早点铺已经亮起了灯，蒸笼里冒出白白的热气。卖菜的老人把一筐筐新鲜的青菜摆得整整齐齐，孩子们背着书包，一边说笑一边往学校走去。远处传来自行车清脆的铃声，公园里有人在打太极，也有人沿着湖边慢慢散步。太阳一点点升高，阳光照在屋顶和树梢上，整条街渐渐热闹起来。人们互相打着招呼，开始了平常而又忙碌的一天。';
+function strainPlanFromForm(){const levels=$('#sLv').value.split(/[,，\s]+/).map(Number).filter(v=>v>30&&v<120);return{secDur:Math.max(10,Math.round(+$('#sMin').value*60)),levels,tol:Math.max(1,+$('#sTol').value||3),text:$('#sText').value}}
+function viewStrain(){
+ if(!ST)ST={phase:'setup',plan:{secDur:60,levels:[75,80,75,80,75,80],tol:3,text:DEFAULT_TEXT},pre:'',created:Date.now()};
+ if(ST.phase==='setup'){const p=ST.plan;
+  $('#content').innerHTML=`<div class="grid2"><div class="card"><h3>测试设置</h3><div class="form">
+   <label>每段时长</label><span><input class="inp" id="sMin" type="number" min="0.25" step="0.25" value="${p.secDur/60}" style="width:90px"> 分钟</span>
+   <label>目标声级序列</label><span><input class="inp" id="sLv" value="${p.levels.join(', ')}" style="width:100%"><div class="hint">每个数字是一段的目标声级（dB），用逗号分隔</div></span>
+   <label>允许偏差</label><span>± <input class="inp" id="sTol" type="number" value="${p.tol}" style="width:70px"> dB</span>
+   <label>测试前疲劳自评</label><span><select class="inp" id="sPre">${['',...Array.from({length:11},(_,i)=>i)].map(v=>`<option ${String(ST.pre)===String(v)?'selected':''}>${v}</option>`).join('')}</select> <span class="hint">0 = 完全不累，10 = 极度疲劳</span></span>
+   <label class="full">朗读文本</label><textarea class="inp full" id="sText" rows="6">${esc(p.text)}</textarea></div>
+   <div class="toolbar" style="margin:14px 0 0"><button class="btn primary" onclick="strainStart()">● 开始测试</button></div></div>
+   <div class="card"><h3>说明</h3><p>受测者按屏幕上的目标声级持续朗读文本（读完从头再读），软件每秒记录一次声级和基频。</p><p>嗓音疲劳或用声不当时，常见表现是随时间推移<b>基频逐渐升高</b>、难以维持目标声级。测试结束后会给出每一段的平均声级、达标率和基频变化。</p><p class="hint">dB 读数的准确性取决于“设置与校准”中的麦克风校准。测试期间请保持与麦克风的距离不变（建议 30 cm）。</p></div></div>`;return}
+ if(ST.phase==='running'){const p=ST.plan;
+  $('#content').innerHTML=`<div class="card"><div class="toolbar"><b style="font-size:16px">第 <span id="sSec">1</span> / ${p.levels.length} 段 · 目标 <span id="sTgt" style="color:var(--ok)">${p.levels[0]}</span> dB</b><span class="grow"></span><span class="big" id="sTime" style="font-size:22px;font-weight:700;font-variant-numeric:tabular-nums">00:00</span><button class="btn rec" onclick="strainFinish()">■ 结束测试</button></div>
+   <div class="strain-meter"><div class="band" id="sBand"></div><div class="needle" id="sNeedle" style="left:0"></div></div><div class="strain-scale">${[50,60,70,80,90,100].map(v=>`<span>${v}</span>`).join('')}</div>
+   <div class="live" style="margin:12px 0"><span class="val">当前声级 <b id="sDb">—</b> dB</span><span class="val">F0 <b id="sF0">—</b> Hz</span><span class="val">本段达标率 <b id="sIn">—</b></span></div>
+   <div class="readtext">${esc(p.text)}</div></div><div class="card"><canvas id="cStrain"></canvas></div>`;strainPos();return}
+ const r=ST.res;
+ $('#content').innerHTML=`<div class="toolbar"><button class="btn" onclick="ST=null;viewStrain()">新的测试</button><span class="grow"></span>${ST.blob?'<button class="btn" onclick="playBlob(ST.blob)">▶ 回放</button>':''}<button class="btn primary" onclick="strainSave()">${ST.savedId?'更新记录':'保存记录'}</button></div>
+  <div class="card"><canvas id="cStrain"></canvas></div>
+  <div class="grid2"><div class="card"><h3>分段结果</h3><table class="kv"><tr><th>段</th><th>目标</th><th>平均声级</th><th>达标率</th><th>平均 F0</th><th>F0 波动</th></tr>${r.stats.map((s,i)=>`<tr><td>${i+1}</td><td>${s.target} dB</td><td class="num">${fx(s.db)} dB</td><td class="num">${fx(s.inTarget*100,0)}%</td><td class="num">${fx(s.f0)} Hz</td><td class="num">${fx(s.f0sdSt,2)} 半音</td></tr>`).join('')}</table>
+   ${trendLine(r)}</div>
+  <div class="card"><h3>自评与备注</h3><div class="form"><label>测试前</label><span>${r.pre===''||r.pre==null?'—':r.pre}</span><label>测试后</label><select class="inp" onchange="ST.res.post=this.value===''?null:+this.value">${['',...Array.from({length:11},(_,i)=>i)].map(v=>`<option ${String(r.post??'')===String(v)?'selected':''}>${v}</option>`).join('')}</select>
+   <label class="full">备注</label><textarea class="inp full" rows="4" oninput="ST.res.comment=this.value">${esc(r.comment)}</textarea></div></div></div>`;
+ const c=setupCanvas($('#cStrain'),300);drawStrain(c.g,c.w,c.h,r)}
+function trendLine(r){const f=r.stats.filter(s=>isFinite(s.f0));if(f.length<2)return'';const dSt=12*Math.log2(f[f.length-1].f0/f[0].f0);
+ return`<p style="margin:10px 0 0">首段到末段 F0 变化 <b>${dSt>=0?'+':''}${fx(dSt,2)} 半音</b>（${fx(f[0].f0)} → ${fx(f[f.length-1].f0)} Hz）。${dSt>1?'F0 明显上升，提示可能存在用声紧张或疲劳。':'F0 基本稳定。'}</p>`}
+async function strainStart(){const plan=strainPlanFromForm();if(!plan.levels.length){toast('请填写目标声级序列');return}
+ ST={phase:'running',plan,pre:$('#sPre').value===''?null:+$('#sPre').value,secs:[],lv:null,created:Date.now()};
+ let rt=null;viewStrain();
+ try{await Mic.start((d,sr)=>{if(!rt)rt=makeRT(sr);strainChunk(rt.push(d))},{record:true})}catch(e){toast('无法打开麦克风：'+e.message,5000);ST.phase='setup';viewStrain();return}
+ ST.t0=performance.now();Mic.onForceStop=strainFinish}
+function strainChunk(r){if(!ST||ST.phase!=='running'||!ST.t0)return;const p=ST.plan,el=(performance.now()-ST.t0)/1000,T=p.levels.length*p.secDur;
+ if(el>=T){strainFinish();return}
+ const si=Math.floor(el),b=ST.secs[si]||(ST.secs[si]={t:si,p:0,np:0,f:[],n:0});b.n++;
+ if(r.f0>0){b.p+=10**(r.db/10);b.np++;b.f.push(r.f0);ST.lv=ST.lv==null?r.db:ST.lv*.75+r.db*.25}
+ ST.lastF0=r.f0;if(!ST.raf)ST.raf=requestAnimationFrame(()=>{ST.raf=0;strainPos()})}
+function finalizeSecs(secs){return secs.filter(Boolean).map(b=>({t:b.t,db:b.np?+(10*Math.log10(b.p/b.np)).toFixed(1):null,f0:b.f.length?+median(b.f).toFixed(1):null,vf:b.n?+(b.np/b.n).toFixed(2):0}))}
+function strainStats(secs,plan){return plan.levels.map((L,i)=>{const s=secs.filter(x=>Math.floor(x.t/plan.secDur)===i),d=s.filter(x=>x.db!=null),f=s.filter(x=>x.f0).map(x=>x.f0);
+ return{target:L,db:d.length?10*Math.log10(mean(d.map(x=>10**(x.db/10)))):NaN,inTarget:d.length?d.filter(x=>Math.abs(x.db-L)<=plan.tol).length/d.length:0,f0:f.length?mean(f):NaN,f0sdSt:sd(f.map(hzMidi))}})}
+function strainPos(){if(!ST||ST.phase!=='running'||!$('#sNeedle'))return;const p=ST.plan,el=ST.t0?(performance.now()-ST.t0)/1000:0,si=Math.min(p.levels.length-1,Math.floor(el/p.secDur)),L=p.levels[si],pos=v=>Math.max(0,Math.min(100,(v-50)/50*100));
+ $('#sSec').textContent=si+1;$('#sTgt').textContent=L;$('#sTime').textContent=`${pad(Math.floor(el/60))}:${pad(Math.floor(el%60))}`;
+ const band=$('#sBand');band.style.left=pos(L-p.tol)+'%';band.style.width=(pos(L+p.tol)-pos(L-p.tol))+'%';
+ if(ST.lv!=null){$('#sNeedle').style.left=pos(ST.lv)+'%';$('#sNeedle').style.background=Math.abs(ST.lv-L)<=p.tol?'var(--ok)':'var(--bad)';$('#sDb').textContent=fx(ST.lv,0)}
+ $('#sF0').textContent=ST.lastF0?fx(ST.lastF0):'—';
+ const secs=finalizeSecs(ST.secs),inSec=secs.filter(x=>Math.floor(x.t/p.secDur)===si&&x.db!=null);$('#sIn').textContent=inSec.length?fx(inSec.filter(x=>Math.abs(x.db-L)<=p.tol).length/inSec.length*100,0)+'%':'—';
+ const now=performance.now();if(!ST._lastDraw||now-ST._lastDraw>1000){ST._lastDraw=now;const c=setupCanvas($('#cStrain'),240);drawStrain(c.g,c.w,c.h,{plan:p,secs})}}
+async function strainFinish(){if(!ST||ST.phase!=='running')return;ST.phase='stopping';const blob=await Mic.stop();
+ const secs=finalizeSecs(ST.secs),used=secs.length?secs[secs.length-1].t+1:0,plan=Object.assign({},ST.plan);
+ const done=Math.ceil(used/plan.secDur);if(done<plan.levels.length)plan.levels=plan.levels.slice(0,Math.max(1,done));
+ ST={phase:'done',blob,created:ST.created,savedId:null,res:{plan,secs,stats:strainStats(secs,plan),pre:ST.pre,post:null,comment:''}};viewStrain()}
+async function strainSave(){const r=ST.res;r.stats=strainStats(r.secs,r.plan);
+ const s={id:ST.savedId||uid(),clientId:cur.cid,type:'strain',created:ST.created,label:'',results:r,audio:ST.blob};await DB.put('sessions',s);ST.savedId=s.id;await loadSessions();await touchClient();toast('已保存');viewStrain()}
+
+/* ---------- 评估报告 ---------- */
+let repSel=null;
+function viewReport(){const c=client();
+ if(!repSel||repSel.cid!==c.id){repSel={cid:c.id,ids:new Set(['vowel','vrp','strain'].map(t=>sessions.find(s=>s.type===t)).filter(Boolean).map(s=>s.id)),opinion:'',examiner:S.examiner||''}}
+ $('#content').innerHTML=`<div class="grid2 no-print" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><div class="card"><h3>选择要写入报告的记录</h3><div class="sel-list">${sessions.length?sessions.map(s=>`<label><input type="checkbox" ${repSel.ids.has(s.id)?'checked':''} onchange="this.checked?repSel.ids.add('${s.id}'):repSel.ids.delete('${s.id}');renderReport()"><span class="tag ${s.type}">${TYPE[s.type]}</span> ${fmtDate(s.created)} ${esc(s.label)}</label>`).join(''):'<div class="hint">暂无测试记录</div>'}</div></div>
+  <div class="card"><h3>评估意见</h3><textarea class="inp" rows="5" placeholder="综合评估、训练建议、复查时间…" oninput="repSel.opinion=this.value;renderReport()">${esc(repSel.opinion)}</textarea>
+  <div class="toolbar" style="margin:10px 0 0"><input class="inp" placeholder="评估人" value="${esc(repSel.examiner)}" oninput="repSel.examiner=this.value;S.examiner=this.value;saveSettings();renderReport()"><span class="grow"></span><button class="btn primary" onclick="window.print()">打印 / 另存为 PDF</button></div></div></div>
+  <div id="reportBox"></div>`;renderReport()}
+function renderReport(){const c=client(),sel=sessions.filter(s=>repSel.ids.has(s.id)).sort((a,b)=>a.created-b.created),dsi=computeDsi(sel.slice().reverse());
+ const W=720,parts=[];
+ for(const s of sel){const r=s.results;
+  if(s.type==='vowel'){const fr=(s.track||[]).map(([t,f0,db])=>({t,f0,db,v:f0>0})),img=fr.length?imgOf(W,170,(g,w,h)=>drawF0(g,w,h,fr,s.dur||fr[fr.length-1].t,[r.t0,r.t1])):'';const g=s.grbas||{};
+   parts.push(`<h2>唱音分析 · ${fmtDate(s.created)} ${esc(s.label)}</h2>${img?`<img src="${img}">`:''}${s.phon&&s.phon.n>=2?(()=>{const P=s.phon,c=(k,d)=>`${fx(P.mean[k],d)} ± ${fx(P.sd[k],d)}`;return`<table><tr><th>${P.n} 次发声</th><th>平均值 ± 标准差</th><th></th><th>平均值 ± 标准差</th></tr>
+    <tr><th>声级</th><td>${c('db',0)} dB</td><th>基频 F0</th><td>${c('f0mean',0)} Hz</td></tr><tr><th>Jitter</th><td>${c('jitter',2)} %</td><th>Shimmer</th><td>${c('shimmer',2)} %</td></tr><tr><th>HNR</th><td>${c('hnr',1)} dB</td><th>CPP</th><td>${c('cpp',1)} dB</td></tr></table><p style="font-size:12px;color:#555;margin:6px 0">选区详细参数：</p>`})():''}<table><tr><th>F0 平均</th><th>F0 SD</th><th>Jitter</th><th>RAP</th><th>PPQ5</th><th>Shimmer</th><th>Shimmer dB</th><th>HNR</th><th>CPP</th><th>MPT</th></tr>
+    <tr><td>${fx(r.f0mean)} Hz</td><td>${fx(r.f0sd,2)} Hz</td><td>${fx(r.jitter,2)}%</td><td>${fx(r.rap,2)}%</td><td>${fx(r.ppq5,2)}%</td><td>${fx(r.shimmer,2)}%</td><td>${fx(r.shimDb,2)}</td><td>${fx(r.hnr)} dB</td><td>${fx(r.cpp)} dB</td><td>${fx(r.mpt)} s</td></tr></table>
+    <table style="margin-top:6px"><tr><th style="width:120px">GRBAS</th><td>G${g.G??0} R${g.R??0} B${g.B??0} A${g.A??0} S${g.S??0}</td></tr>${s.comment?`<tr><th>听感描述</th><td style="white-space:pre-wrap">${esc(s.comment)}</td></tr>`:''}</table>`)}
+  if(s.type==='vrp'&&r){const img=imgOf(W,330,(g,w,h)=>drawVrp(g,w,h,s.points||[]));
+   parts.push(`<h2>音域测量（声域图）· ${fmtDate(s.created)}</h2><img src="${img}"><table><tr><th>最低音</th><th>最高音</th><th>音域跨度</th><th>最小声强</th><th>最大声强</th><th>面积</th></tr><tr><td>${noteName(r.lo)} (${fx(r.f0lo,0)} Hz)</td><td>${noteName(r.hi)} (${fx(r.f0hi,0)} Hz)</td><td>${r.range} 半音</td><td>${fx(r.ilow)} dB</td><td>${fx(r.ihigh)} dB</td><td>${fx(r.area,0)} dB·半音</td></tr></table>${s.comment?`<p>${esc(s.comment)}</p>`:''}`)}
+  if(s.type==='strain'){const img=imgOf(W,280,(g,w,h)=>drawStrain(g,w,h,r));
+   parts.push(`<h2>声音疲劳测试 · ${fmtDate(s.created)}</h2><img src="${img}"><table><tr><th>段</th><th>目标</th><th>平均声级</th><th>达标率</th><th>平均 F0</th><th>F0 波动</th></tr>${r.stats.map((x,i)=>`<tr><td>${i+1}</td><td>${x.target} dB</td><td>${fx(x.db)} dB</td><td>${fx(x.inTarget*100,0)}%</td><td>${fx(x.f0)} Hz</td><td>${fx(x.f0sdSt,2)} 半音</td></tr>`).join('')}</table>
+    ${trendLine(r)}${r.pre!=null||r.post!=null?`<p>疲劳自评：测试前 ${r.pre??'—'}，测试后 ${r.post??'—'}（0–10）</p>`:''}${r.comment?`<p>${esc(r.comment)}</p>`:''}`)}}
+ $('#reportBox').innerHTML=`<div class="report"><h1>${esc(S.studio||'')}嗓音评估报告</h1><div class="rsub">报告日期 ${fmtDate(Date.now()).slice(0,10)}</div>
+  <table class="info"><tr><td>姓名：${esc(c.name)}</td><td>编号：${esc(c.code||'—')}</td><td>性别：${esc(c.sex||'—')}</td><td>年龄：${age(c.birth)||'—'}</td><td>声部：${esc(c.voice||'—')}</td></tr></table>
+  ${dsi?`<h2>嗓音障碍严重指数（DSI）</h2><table><tr><th>DSI</th><th>MPT</th><th>F0 高</th><th>I 低</th><th>Jitter</th></tr><tr><td><b>${fx(dsi.dsi,1)}</b></td><td>${fx(dsi.mpt)} s</td><td>${fx(dsi.f0hi,0)} Hz</td><td>${fx(dsi.ilow)} dB</td><td>${fx(dsi.jit,2)}%</td></tr></table><p style="font-size:12px;color:#555">DSI = 0.13·MPT + 0.0053·F0高 − 0.26·I低 − 1.18·Jitter + 12.4；+5 为正常嗓音，−5 为重度嗓音障碍。</p>`:''}
+  ${parts.join('')||'<p style="color:#888">请在上方勾选要写入报告的测试记录。</p>'}
+  ${repSel.opinion?`<h2>评估意见</h2><p style="white-space:pre-wrap">${esc(repSel.opinion)}</p>`:''}
+  <div class="sign"><span>评估人：${esc(repSel.examiner)}</span><span>日期：${fmtDate(Date.now()).slice(0,10)}</span></div>
+  <div class="note">本报告的声学参数由嗓音分析工作站计算，声级数值基于麦克风校准结果。报告用于嗓音训练评估参考，不能替代医学诊断。</div></div>`}
+
+/* ---------- 设置与校准 ---------- */
+async function openSettings(){await stopActive();
+ const d=modal(`<h3>设置与校准</h3><div class="form">
+  <label>工作室名称</label><input class="inp" id="stStudio" value="${esc(S.studio)}" placeholder="显示在报告标题">
+  <label>麦克风</label><select class="inp" id="stDev"><option value="">系统默认</option></select>
+  <label>F0 范围</label><span><input class="inp" id="stFmin" type="number" value="${S.fmin}" style="width:80px"> – <input class="inp" id="stFmax" type="number" value="${S.fmax}" style="width:80px"> Hz</span>
+  <label>校准偏移</label><span><input class="inp" id="stCal" type="number" step="0.1" value="${S.calib}" style="width:100px"> dB</span>
+  <div class="full card" style="margin:6px 0 0;background:#f8fafc"><b>用声级计校准</b><p class="hint" style="margin:4px 0 8px">在麦克风旁 30 cm 处放置声级计（或手机声级计 App）；点“开始”，发一个稳定的长音或播放稳定的噪声，把声级计读数填在右侧，点“应用”。</p>
+   <div class="toolbar" style="margin:0"><button class="btn" id="stCalBtn" onclick="calibToggle()">开始</button><span class="val">当前读数 <b id="stCur">—</b> dB</span><input class="inp" id="stRef" type="number" placeholder="声级计读数" style="width:110px"><button class="btn primary" onclick="calibApply()">应用</button></div></div></div>
+  <div class="acts"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="settingsSave()">保存</button></div>`);
+ d._onclose=()=>Mic.stop();
+ try{const devs=(await navigator.mediaDevices.enumerateDevices()).filter(x=>x.kind==='audioinput'&&x.deviceId&&x.deviceId!=='default');$('#stDev').innerHTML+=devs.map((x,i)=>`<option value="${esc(x.deviceId)}" ${x.deviceId===S.deviceId?'selected':''}>${esc(x.label||'麦克风 '+(i+1))}</option>`).join('')}catch(e){}}
+let calRaw=null;
+async function calibToggle(){if(Mic.active){await Mic.stop();$('#stCalBtn').textContent='开始';return}
+ const keep=S.deviceId;S.deviceId=$('#stDev').value;let acc=[];
+ try{await Mic.start(d=>{let s=0;for(const v of d)s+=v*v;acc.push(s/d.length);if(acc.length>10)acc.shift();calRaw=10*Math.log10(mean(acc)+1e-18);const el=$('#stCur');if(el)el.textContent=fx(calRaw+(+$('#stCal').value),1)})}catch(e){toast('无法打开麦克风：'+e.message,5000)}
+ S.deviceId=keep;$('#stCalBtn').textContent='停止'}
+function calibApply(){const ref=+$('#stRef').value;if(!ref||calRaw==null){toast('请先开始测量并填写声级计读数');return}$('#stCal').value=(ref-calRaw).toFixed(1);toast('已计算校准偏移，点“保存”生效')}
+async function settingsSave(){S.studio=$('#stStudio').value.trim();S.deviceId=$('#stDev').value;S.fmin=Math.max(40,+$('#stFmin').value||60);S.fmax=Math.min(2000,Math.max(S.fmin+50,+$('#stFmax').value||1100));S.calib=+$('#stCal').value||0;saveSettings();await closeModal();toast('设置已保存');renderMain()}
+
+/* ---------- 备份 ---------- */
+const blobToUrl=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)});
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000)}
+async function exportBackup(){toast('正在打包…');const ss=await DB.all('sessions');for(const s of ss)if(s.audio instanceof Blob)s.audio=await blobToUrl(s.audio);
+ download(new Blob([JSON.stringify({app:'voicelab',version:1,exported:Date.now(),settings:S,clients:await DB.all('clients'),sessions:ss})],{type:'application/json'}),`嗓音工作站备份_${fmtDate(Date.now()).replace(/[: ]/g,'-')}.json`)}
+async function importBackup(inp){const f=inp.files[0];inp.value='';if(!f)return;try{const d=JSON.parse(await f.text());if(d.app!=='voicelab')throw new Error('不是本软件的备份文件');
+ if(!confirm(`将导入 ${d.clients.length} 位学员、${d.sessions.length} 条记录（相同记录会被覆盖）。继续？`))return;
+ for(const c of d.clients)await DB.put('clients',c);for(const s of d.sessions){if(typeof s.audio==='string')s.audio=await(await fetch(s.audio)).blob();await DB.put('sessions',s)}
+ clients=await DB.all('clients');renderSidebar();if(cur.cid){await loadSessions();renderMain()}toast('导入完成')}catch(e){toast('导入失败：'+e.message,5000)}}
+
+/* ---------- 启动 ---------- */
+let rsz=0;window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{if(cur.tab==='vowel')drawVowel();else if(cur.tab==='vrp')drawVrpNow();else if(cur.tab==='strain'&&ST&&ST.phase==='done')viewStrain()},150)});
+(async()=>{try{await DB.open();clients=await DB.all('clients')}catch(e){toast('无法打开本地数据库：'+e.message,8000)}renderSidebar();renderMain()})();
+</script>
+</body>
+</html>
