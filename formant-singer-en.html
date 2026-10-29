@@ -220,9 +220,18 @@ function sanitize(o){const v=clone(FACTORY);if(!o||typeof o!=="object")return v;
 
 /* ---------- audio ---------- */
 let ctx=null,node=null,fallbackEngine=null;
+/* iOS: audio must be started synchronously inside a tap (touchend/click), and
+   the "playback" session keeps it audible when the ring/silent switch is on mute */
+function unlockAudio(){
+  try{if(navigator.audioSession)navigator.audioSession.type="playback";}catch(e){}
+  if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();
+  if(ctx.state!=="running"){ctx.resume();
+    const b=ctx.createBufferSource();b.buffer=ctx.createBuffer(1,1,22050);b.connect(ctx.destination);b.start(0);}
+}
+["touchend","pointerup","click","keydown"].forEach(t=>document.addEventListener(t,unlockAudio,true));
 async function ensureAudio(){
-  if(ctx){if(ctx.state!=="running")await ctx.resume();return;}
-  ctx=new (window.AudioContext||window.webkitAudioContext)();
+  unlockAudio();
+  if(node){if(ctx.state!=="running")await ctx.resume();return;}
   try{
     const src=VoiceEngine.toString()+`
 class VP extends AudioWorkletProcessor{constructor(){super();this.e=new VoiceEngine(sampleRate);this.c=0;this.port.onmessage=m=>this.e.setParams(m.data);}

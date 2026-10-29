@@ -1,3 +1,4 @@
+﻿<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>共振峰歌声合成器</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -218,9 +219,18 @@ function sanitize(o){const v=clone(FACTORY);if(!o||typeof o!=="object")return v;
 
 /* ---------- audio ---------- */
 let ctx=null,node=null,fallbackEngine=null;
+/* iOS: audio must be started synchronously inside a tap (touchend/click), and
+   the "playback" session keeps it audible when the ring/silent switch is on mute */
+function unlockAudio(){
+  try{if(navigator.audioSession)navigator.audioSession.type="playback";}catch(e){}
+  if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();
+  if(ctx.state!=="running"){ctx.resume();
+    const b=ctx.createBufferSource();b.buffer=ctx.createBuffer(1,1,22050);b.connect(ctx.destination);b.start(0);}
+}
+["touchend","pointerup","click","keydown"].forEach(t=>document.addEventListener(t,unlockAudio,true));
 async function ensureAudio(){
-  if(ctx){if(ctx.state!=="running")await ctx.resume();return;}
-  ctx=new (window.AudioContext||window.webkitAudioContext)();
+  unlockAudio();
+  if(node){if(ctx.state!=="running")await ctx.resume();return;}
   try{
     const src=VoiceEngine.toString()+`
 class VP extends AudioWorkletProcessor{constructor(){super();this.e=new VoiceEngine(sampleRate);this.c=0;this.port.onmessage=m=>this.e.setParams(m.data);}
@@ -435,3 +445,5 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{drawSp
 new MutationObserver(()=>{drawSpec();drawMap();}).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
 changed();
 </script>
+
+</body></html>
