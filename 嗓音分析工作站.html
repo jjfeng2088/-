@@ -27,6 +27,8 @@ aside{background:var(--side);color:var(--side-ink);display:flex;flex-direction:c
 .side-foot{border-top:1px solid #263447;padding:10px 14px;display:flex;gap:6px;flex-wrap:wrap}
 .side-foot button{background:none;border:1px solid #33465f;color:var(--side-ink);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px}
 .side-foot button:hover{background:#223044}
+.side-foot a{border:1px solid #33465f;color:var(--side-ink);border-radius:6px;padding:4px 10px;font-size:12px;text-decoration:none}
+.side-foot a:hover{background:#223044}
 main{overflow:auto;min-width:0}
 .head{background:var(--panel);border-bottom:1px solid var(--line);padding:14px 24px 0;position:sticky;top:0;z-index:5}
 .head h1{margin:0;font-size:20px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
@@ -134,7 +136,7 @@ table.kv td.ref{color:var(--muted);font-size:12.5px}
   <div class="brand">嗓音分析工作站<small>Voice Lab · 工作室版</small></div>
   <div class="side-tools"><input id="search" placeholder="搜索学员" oninput="renderSidebar()"><button onclick="editClient()">+ 新建</button></div>
   <div id="clientList"></div>
-  <div class="side-foot"><button onclick="openSettings()">⚙ 设置与校准</button><button onclick="exportBackup()">导出备份</button><label><button onclick="this.nextElementSibling.click()">导入备份</button><input type="file" accept=".json" hidden onchange="importBackup(this)"></label></div>
+  <div class="side-foot"><a href="formant-singer.html" target="_blank" title="在新窗口打开共振峰歌声合成器">🎹 共振峰合成器</a><button onclick="openSettings()">⚙ 设置与校准</button><button onclick="exportBackup()">导出备份</button><label><button onclick="this.nextElementSibling.click()">导入备份</button><input type="file" accept=".json" hidden onchange="importBackup(this)"></label></div>
  </aside>
  <main id="main"></main>
 </div>
